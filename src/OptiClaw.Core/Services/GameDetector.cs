@@ -8,7 +8,6 @@ public sealed class GameDetector
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["nvngx_dlss.dll"] = "DLSS",
-            ["nvngx_dlssd.dll"] = "DLSS Ray Reconstruction",
             ["sl.interposer.dll"] = "NVIDIA Streamline",
             ["libxess.dll"] = "XeSS",
             ["libxess_dx11.dll"] = "XeSS",
