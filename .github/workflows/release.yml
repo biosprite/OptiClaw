@@ -15,9 +15,24 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
-      - name: Build self-contained executable
+      - name: Build optimized self-contained executable
         shell: pwsh
         run: .\scripts\build.ps1
+      - name: Verify optimized artifact
+        shell: pwsh
+        run: |
+          $artifact = Get-Item -LiteralPath .\artifacts\OptiClaw.exe
+          if ($artifact.Length -gt 80MB) {
+            throw "OptiClaw.exe is $($artifact.Length) bytes; the optimized artifact must remain under 80 MiB."
+          }
+
+          $packages = dotnet list .\src\OptiClaw\OptiClaw.csproj package --include-transitive
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not inspect the resolved package graph."
+          }
+          if ($packages -match 'Microsoft\.WindowsAppSDK\.(AI|ML)') {
+            throw "The release package graph unexpectedly includes Windows App SDK AI/ML components."
+          }
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
