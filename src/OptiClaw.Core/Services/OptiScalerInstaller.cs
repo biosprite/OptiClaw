@@ -138,6 +138,48 @@ public sealed class OptiScalerInstaller(AppDataPaths paths)
         return RestoreResult.Success;
     }
 
+    public async Task<FrameGenerationSettings> LoadFrameGenerationSettingsAsync(
+        Guid gameId,
+        Guid installId,
+        CancellationToken cancellationToken = default)
+    {
+        var manifest = await LoadManifestAsync(gameId, installId, cancellationToken).ConfigureAwait(false);
+        var iniPath = GetSafeDestination(manifest.DeploymentDirectory, "OptiScaler.ini");
+        if (!File.Exists(iniPath))
+        {
+            throw new FileNotFoundException("The installed OptiScaler.ini could not be found.", iniPath);
+        }
+
+        return await IniEditor.ReadFrameGenerationAsync(iniPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task UpdateFrameGenerationSettingsAsync(
+        Guid gameId,
+        Guid installId,
+        FrameGenerationSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        var manifest = await LoadManifestAsync(gameId, installId, cancellationToken).ConfigureAwait(false);
+        if (manifest.RestoredAt is not null)
+        {
+            throw new InvalidOperationException("This OptiScaler installation has already been restored.");
+        }
+
+        var iniChange = manifest.Files.FirstOrDefault(change =>
+            change.RelativePath.Equals("OptiScaler.ini", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException("The install manifest does not contain OptiScaler.ini.");
+        var iniPath = GetSafeDestination(manifest.DeploymentDirectory, iniChange.RelativePath);
+        if (!File.Exists(iniPath))
+        {
+            throw new FileNotFoundException("The installed OptiScaler.ini could not be found.", iniPath);
+        }
+
+        await IniEditor.ConfigureFrameGenerationAsync(iniPath, settings, cancellationToken).ConfigureAwait(false);
+        iniChange.InstalledSha256 = await FileSystemHelpers.ComputeSha256Async(iniPath, cancellationToken)
+            .ConfigureAwait(false);
+        await SaveManifestAsync(manifest, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<InstallManifest> LoadManifestAsync(
         Guid gameId,
         Guid installId,

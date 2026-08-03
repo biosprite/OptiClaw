@@ -51,6 +51,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -68,7 +69,16 @@
                         </Button>
                     </Grid>
 
-                    <Grid Grid.Row="1" Margin="0,14,0,12" ColumnSpacing="8">
+                    <InfoBar
+                        Grid.Row="1"
+                        Margin="0,12,0,0"
+                        IsOpen="True"
+                        IsClosable="False"
+                        Severity="Warning"
+                        Title="Single-player games only"
+                        Message="DLL injection may trigger anti-cheat systems." />
+
+                    <Grid Grid.Row="2" Margin="0,12" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
@@ -87,7 +97,7 @@
                         </Button>
                     </Grid>
 
-                    <Grid Grid.Row="2">
+                    <Grid Grid.Row="3">
                         <ListView
                             x:Name="GamesList"
                             ItemsSource="{x:Bind Games}"
@@ -158,9 +168,9 @@
 
                             <Border Background="#10151C" CornerRadius="10" Padding="18">
                                 <StackPanel Spacing="8">
-                                    <TextBlock Text="DETECTED INPUTS" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <TextBlock Text="DETECTED COMPONENTS" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
                                     <TextBlock x:Name="DetectedInputsText" Text="None found" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="OptiScaler will expose these game inputs through Intel XeSS." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="Libraries found in the game folder. Their presence does not guarantee every related feature is enabled in-game." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
 
@@ -224,12 +234,85 @@
                                 <Button Grid.Column="2" Click="RemoveGame_Click" Style="{StaticResource HandheldButtonStyle}" Content="Remove" />
                             </Grid>
 
-                            <InfoBar
-                                IsOpen="True"
-                                IsClosable="False"
-                                Severity="Warning"
-                                Title="Use with single-player games"
-                                Message="DLL injection may trigger anti-cheat systems. OptiClaw intentionally does not bypass anti-cheat or protected game folders." />
+                            <ContentControl
+                                x:Name="FrameGenerationPanel"
+                                IsEnabled="False"
+                                HorizontalContentAlignment="Stretch">
+                                <Border Background="#10151C" CornerRadius="10" Padding="18">
+                                    <StackPanel Spacing="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="FRAME GENERATION" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <TextBlock Text="Configure OptiScaler FG without opening its in-game overlay." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            x:Name="FrameGenerationEnabledToggle"
+                                            Grid.Column="1"
+                                            OffContent="Off"
+                                            OnContent="On"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="FG INPUT" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <ComboBox
+                                                x:Name="FrameGenerationInputCombo"
+                                                ItemsSource="{x:Bind FrameGenerationInputOptions}"
+                                                DisplayMemberPath="Label"
+                                                SelectedIndex="0"
+                                                HorizontalAlignment="Stretch" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Spacing="6">
+                                            <TextBlock Text="FG OUTPUT" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <ComboBox
+                                                x:Name="FrameGenerationOutputCombo"
+                                                ItemsSource="{x:Bind FrameGenerationOutputOptions}"
+                                                DisplayMemberPath="Label"
+                                                SelectedIndex="0"
+                                                HorizontalAlignment="Stretch" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2" Spacing="6">
+                                            <TextBlock Text="MULTIPLIER" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <ComboBox
+                                                x:Name="FrameGenerationMultiplierCombo"
+                                                ItemsSource="{x:Bind FrameGenerationMultiplierOptions}"
+                                                DisplayMemberPath="Label"
+                                                SelectedIndex="0"
+                                                HorizontalAlignment="Stretch" />
+                                        </StackPanel>
+
+                                        <Button
+                                            Grid.Column="3"
+                                            Click="ApplyFrameGeneration_Click"
+                                            Content="Apply"
+                                            MinHeight="42"
+                                            Padding="18,8"
+                                            VerticalAlignment="Bottom" />
+                                    </Grid>
+
+                                    <TextBlock
+                                        x:Name="FrameGenerationHelpText"
+                                        Text="Install XeSS to configure frame generation."
+                                        FontSize="11"
+                                        Foreground="{StaticResource ClawMutedBrush}"
+                                        TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </ContentControl>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

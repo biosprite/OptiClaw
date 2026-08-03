@@ -12,6 +12,22 @@ using WinRT.Interop;
 
 namespace OptiClaw;
 
+public sealed class FrameGenerationOption
+{
+    public FrameGenerationOption()
+    {
+    }
+
+    public FrameGenerationOption(string label, string value)
+    {
+        Label = label;
+        Value = value;
+    }
+
+    public string Label { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+}
+
 public sealed partial class MainWindow : Window
 {
     private readonly AppDataPaths _paths = new();
@@ -21,6 +37,7 @@ public sealed partial class MainWindow : Window
     private readonly OptiScalerInstaller _installer;
     private readonly OptiScalerReleaseClient _releaseClient;
     private bool _isBusy;
+    private Guid? _loadedFrameGenerationInstallId;
 
     public MainWindow()
     {
@@ -38,6 +55,22 @@ public sealed partial class MainWindow : Window
 
     public ObservableCollection<GameProfile> Games { get; } = [];
     public IReadOnlyList<string> ProxyDllNames => OptiScalerInstaller.SupportedProxyDllNames;
+    public IReadOnlyList<FrameGenerationOption> FrameGenerationInputOptions { get; } =
+    [
+        new("OptiFG (Upscaler fallback)", "upscaler"),
+        new("DLSSG via Streamline — requires native in-game DLSS FG", "dlssg"),
+        new("FSR 3.1 FG — requires native in-game FSR FG", "fsrfg")
+    ];
+    public IReadOnlyList<FrameGenerationOption> FrameGenerationOutputOptions { get; } =
+    [
+        new("Intel XeFG", "xefg")
+    ];
+    public IReadOnlyList<FrameGenerationOption> FrameGenerationMultiplierOptions { get; } =
+    [
+        new("2x", "1"),
+        new("3x", "2"),
+        new("4x", "3")
+    ];
 
     private GameProfile? SelectedGame => GamesList.SelectedItem as GameProfile;
 
@@ -223,6 +256,34 @@ public sealed partial class MainWindow : Window
         }, keepCompletionStatus: true);
     }
 
+    private async void ApplyFrameGeneration_Click(object sender, RoutedEventArgs e)
+    {
+        var game = SelectedGame;
+        if (game?.ActiveInstallId is not Guid installId
+            || FrameGenerationInputCombo.SelectedItem is not FrameGenerationOption input
+            || FrameGenerationOutputCombo.SelectedItem is not FrameGenerationOption output
+            || FrameGenerationMultiplierCombo.SelectedItem is not FrameGenerationOption multiplier
+            || !int.TryParse(multiplier.Value, out var interpolationCount))
+        {
+            return;
+        }
+
+        var settings = new FrameGenerationSettings(
+            FrameGenerationEnabledToggle.IsOn,
+            input.Value,
+            output.Value,
+            interpolationCount);
+        await RunBusyAsync("Saving frame-generation settings…", async () =>
+        {
+            await _installer.UpdateFrameGenerationSettingsAsync(game.Id, installId, settings);
+            _loadedFrameGenerationInstallId = installId;
+            FrameGenerationHelpText.Text = settings.Enabled
+                ? "Saved. Fully restart the game; XeFG requires Borderless display mode."
+                : "Frame generation is disabled. Fully restart the game to apply the change.";
+            StatusText.Text = $"Frame-generation settings saved for {game.Name}";
+        }, keepCompletionStatus: true);
+    }
+
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
     {
         var directory = SelectedGame?.DeploymentDirectory;
@@ -313,6 +374,7 @@ public sealed partial class MainWindow : Window
         DetailsPanel.Visibility = game is null ? Visibility.Collapsed : Visibility.Visible;
         if (game is null)
         {
+            _loadedFrameGenerationInstallId = null;
             return;
         }
 
@@ -327,9 +389,75 @@ public sealed partial class MainWindow : Window
         InstallStateBadge.Background = game.IsInstalled
             ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawXeSSBlueBadgeBrush"]
             : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawReadyBadgeBrush"];
+        FrameGenerationPanel.IsEnabled = !_isBusy && game.IsInstalled;
+        FrameGenerationHelpText.Text = !game.IsInstalled
+            ? "Install XeSS to configure frame generation."
+            : "Use OptiFG when the game has no native FG. Native inputs require enabling FG in the game's settings. Changes require a full restart; XeFG requires Borderless display mode.";
+        if (game.ActiveInstallId is Guid installId)
+        {
+            if (_loadedFrameGenerationInstallId != installId)
+            {
+                _loadedFrameGenerationInstallId = installId;
+                _ = LoadFrameGenerationSettingsAsync(game, installId);
+            }
+        }
+        else
+        {
+            _loadedFrameGenerationInstallId = null;
+            ResetFrameGenerationControls();
+        }
         InstallButton.IsEnabled = !_isBusy && !game.IsInstalled;
         RestoreButton.IsEnabled = !_isBusy && game.IsInstalled;
         ProxyDllCombo.IsEnabled = !_isBusy && !game.IsInstalled;
+    }
+
+    private async Task LoadFrameGenerationSettingsAsync(GameProfile game, Guid installId)
+    {
+        try
+        {
+            var settings = await _installer.LoadFrameGenerationSettingsAsync(game.Id, installId);
+            if (!ReferenceEquals(SelectedGame, game) || game.ActiveInstallId != installId)
+            {
+                return;
+            }
+
+            FrameGenerationEnabledToggle.IsOn = settings.Enabled;
+            SelectFrameGenerationOption(FrameGenerationInputCombo, FrameGenerationInputOptions, settings.Input);
+            SelectFrameGenerationOption(FrameGenerationOutputCombo, FrameGenerationOutputOptions, settings.Output);
+            SelectFrameGenerationOption(
+                FrameGenerationMultiplierCombo,
+                FrameGenerationMultiplierOptions,
+                settings.InterpolationCount.ToString());
+        }
+        catch (Exception exception)
+        {
+            if (ReferenceEquals(SelectedGame, game) && game.ActiveInstallId == installId)
+            {
+                _loadedFrameGenerationInstallId = null;
+                FrameGenerationHelpText.Text = $"Could not read FG settings: {GetFriendlyError(exception)}";
+            }
+        }
+    }
+
+    private void ResetFrameGenerationControls()
+    {
+        FrameGenerationEnabledToggle.IsOn = false;
+        FrameGenerationInputCombo.SelectedIndex = 0;
+        FrameGenerationOutputCombo.SelectedIndex = 0;
+        FrameGenerationMultiplierCombo.SelectedIndex = 0;
+    }
+
+    private static void SelectFrameGenerationOption(
+        ComboBox comboBox,
+        IEnumerable<FrameGenerationOption> options,
+        string value)
+    {
+        comboBox.SelectedItem = options.FirstOrDefault(option =>
+            option.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+        if (comboBox.SelectedIndex < 0)
+        {
+            comboBox.SelectedIndex = 0;
+        }
     }
 
     private async Task RunBusyAsync(
