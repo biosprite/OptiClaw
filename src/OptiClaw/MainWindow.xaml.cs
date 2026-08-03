@@ -57,9 +57,9 @@ public sealed partial class MainWindow : Window
     public IReadOnlyList<string> ProxyDllNames => OptiScalerInstaller.SupportedProxyDllNames;
     public IReadOnlyList<FrameGenerationOption> FrameGenerationInputOptions { get; } =
     [
-        new("OptiFG (Upscaler fallback)", "upscaler"),
         new("DLSSG via Streamline — requires native in-game DLSS FG", "dlssg"),
-        new("FSR 3.1 FG — requires native in-game FSR FG", "fsrfg")
+        new("FSR 3.1 FG — requires native in-game FSR FG", "fsrfg"),
+        new("OptiFG (Upscaler fallback)", "upscaler")
     ];
     public IReadOnlyList<FrameGenerationOption> FrameGenerationOutputOptions { get; } =
     [
