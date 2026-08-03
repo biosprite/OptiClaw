@@ -142,28 +142,30 @@ public sealed class OptiScalerReleaseClient : IDisposable
 
             var totalBytes = response.Content.Headers.ContentLength ?? release.Size;
             await using var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            await using var destination = new FileStream(
+            await using (var destination = new FileStream(
                 temporaryPath,
                 FileMode.Create,
                 FileAccess.Write,
                 FileShare.None,
                 1024 * 128,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-            var buffer = new byte[1024 * 128];
-            long downloaded = 0;
-            int read;
-            while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                downloaded += read;
-                if (totalBytes > 0)
+                var buffer = new byte[1024 * 128];
+                long downloaded = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
                 {
-                    progress?.Report(Math.Min(0.9, downloaded / (double)totalBytes * 0.9));
+                    await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    downloaded += read;
+                    if (totalBytes > 0)
+                    {
+                        progress?.Report(Math.Min(0.9, downloaded / (double)totalBytes * 0.9));
+                    }
                 }
+
+                await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
             var actualSha256 = await FileSystemHelpers.ComputeSha256Async(temporaryPath, cancellationToken)
                 .ConfigureAwait(false);
             if (release.Sha256 is not null
