@@ -1,0 +1,251 @@
+<Window
+    x:Class="OptiClaw.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:OptiClaw.Core.Models"
+    Title="OptiClaw">
+
+    <Grid x:Name="RootGrid" Loaded="RootGrid_Loaded" Background="#0D1117" XYFocusKeyboardNavigation="Enabled">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="20,0,140,0" Background="#0D1117">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                <Border Width="28" Height="28" CornerRadius="7" Background="#E12A45">
+                    <FontIcon Glyph="&#xE950;" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="OPTICLAW" FontSize="15" FontWeight="SemiBold" CharacterSpacing="120" VerticalAlignment="Center" />
+                <Border Background="#222A36" CornerRadius="10" Padding="8,3" Margin="4,0,0,0">
+                    <TextBlock Text="MSI CLAW" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource ClawMutedBrush}" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="24,18,24,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="XeSS, where your games expect DLSS or FSR." FontSize="28" FontWeight="SemiBold" />
+                <TextBlock Text="Find a game, choose its proxy, and OptiClaw handles the reversible install." Margin="0,6,0,0" Foreground="{StaticResource ClawMutedBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock Text="UPSTREAM" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Right" />
+                <TextBlock x:Name="ReleaseVersionText" Text="Not checked" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="24,0,24,18" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{StaticResource ClawCardBrush}" BorderBrush="{StaticResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="GAME LIBRARY" FontSize="11" CharacterSpacing="110" Foreground="{StaticResource ClawMutedBrush}" />
+                            <TextBlock x:Name="GameCountText" Text="0 games" FontSize="20" FontWeight="SemiBold" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Click="ScanLibraries_Click" ToolTipService.ToolTip="Scan Steam and Xbox libraries" Width="44" Height="44" Padding="0" CornerRadius="8">
+                            <FontIcon Glyph="&#xE721;" FontSize="16" />
+                        </Button>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,14,0,12" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Click="AddGame_Click" Style="{StaticResource HandheldButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                <TextBlock Text="Add game" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Click="ScanFolder_Click" Style="{StaticResource HandheldButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xED25;" FontSize="14" />
+                                <TextBlock Text="Scan folder" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <ListView
+                            x:Name="GamesList"
+                            ItemsSource="{x:Bind Games}"
+                            SelectionChanged="GamesList_SelectionChanged"
+                            IsItemClickEnabled="False"
+                            SelectionMode="Single"
+                            HorizontalContentAlignment="Stretch">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="10" />
+                                    <Setter Property="Margin" Value="0,2" />
+                                    <Setter Property="MinHeight" Value="72" />
+                                    <Setter Property="CornerRadius" Value="8" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:GameProfile">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Background="#E12A45" CornerRadius="4" Margin="0,2" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{x:Bind StatusSummary, Mode=OneWay}" FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                            <FontIcon Glyph="&#xE8B7;" FontSize="32" Foreground="{StaticResource ClawMutedBrush}" />
+                            <TextBlock Text="No compatible games yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                            <TextBlock Text="Add an EXE or scan your libraries." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="{StaticResource ClawCardBrush}" BorderBrush="{StaticResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12">
+                <Grid>
+                    <StackPanel x:Name="EmptyDetailsPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <Border Width="64" Height="64" CornerRadius="16" Background="#222A36">
+                            <FontIcon Glyph="&#xE7FC;" FontSize="28" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Choose a game" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock Text="Its detected upscalers and install controls will appear here." MaxWidth="380" Foreground="{StaticResource ClawMutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <ScrollViewer x:Name="DetailsPanel" Visibility="Collapsed" Padding="28" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock x:Name="SelectedGameNameText" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="SelectedGameSourceText" Margin="0,5,0,0" Foreground="{StaticResource ClawMutedBrush}" />
+                                </StackPanel>
+                                <Border Grid.Column="1" x:Name="InstallStateBadge" Background="#27332F" CornerRadius="12" Padding="10,5" VerticalAlignment="Top">
+                                    <TextBlock x:Name="InstallStateText" Text="READY" FontSize="11" CharacterSpacing="100" Foreground="{StaticResource ClawGreenBrush}" FontWeight="SemiBold" />
+                                </Border>
+                            </Grid>
+
+                            <Border Background="#10151C" CornerRadius="10" Padding="18">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="DETECTED INPUTS" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <TextBlock x:Name="DetectedInputsText" Text="None found" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="OptiScaler will expose these game inputs through Intel XeSS." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Spacing="7">
+                                <TextBlock Text="GAME EXECUTABLE" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                <TextBlock x:Name="ExecutablePathText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="7">
+                                <TextBlock Text="INSTALL BESIDE" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                <TextBlock x:Name="DeploymentPathText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
+                            </StackPanel>
+
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="7">
+                                    <TextBlock Text="OUTPUT UPSCALER" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <Border Background="#10151C" CornerRadius="8" Padding="13,11">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <FontIcon Glyph="&#xE950;" FontSize="16" Foreground="{StaticResource ClawGreenBrush}" />
+                                            <TextBlock Text="Intel XeSS" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="7">
+                                    <TextBlock Text="PROXY DLL" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <ComboBox x:Name="ProxyDllCombo" ItemsSource="{x:Bind ProxyDllNames}" SelectedIndex="0" MinHeight="44" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="InstallButton" Grid.Column="0" Click="Install_Click" Style="{StaticResource AccentButtonStyle}" MinHeight="52" HorizontalAlignment="Stretch" CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="9">
+                                        <FontIcon Glyph="&#xE896;" FontSize="15" />
+                                        <TextBlock Text="Install XeSS" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="RestoreButton" Grid.Column="1" Click="Restore_Click" MinHeight="52" HorizontalAlignment="Stretch" CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE777;" FontSize="15" />
+                                        <TextBlock Text="Restore" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Click="RescanGame_Click" Style="{StaticResource HandheldButtonStyle}" Content="Scan again" />
+                                <Button Grid.Column="1" Click="OpenFolder_Click" Style="{StaticResource HandheldButtonStyle}" Content="Open folder" />
+                                <Button Grid.Column="2" Click="RemoveGame_Click" Style="{StaticResource HandheldButtonStyle}" Content="Remove" />
+                            </Grid>
+
+                            <InfoBar
+                                IsOpen="True"
+                                IsClosable="False"
+                                Severity="Warning"
+                                Title="Use with single-player games"
+                                Message="DLL injection may trigger anti-cheat systems. OptiClaw intentionally does not bypass anti-cheat or protected game folders." />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="3" Background="#111720" Padding="24,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="260" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="9">
+                <ProgressRing x:Name="BusyRing" Width="18" Height="18" IsActive="False" />
+                <TextBlock x:Name="StatusText" Text="Ready" Foreground="{StaticResource ClawMutedBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <ProgressBar x:Name="WorkProgress" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>

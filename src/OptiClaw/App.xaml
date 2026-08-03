@@ -1,0 +1,26 @@
+<Application
+    x:Class="OptiClaw.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <SolidColorBrush x:Key="ClawCardBrush" Color="#151A22" />
+            <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#2B3340" />
+            <SolidColorBrush x:Key="ClawMutedBrush" Color="#AAB3C2" />
+            <SolidColorBrush x:Key="ClawGreenBrush" Color="#55D6A8" />
+            <SolidColorBrush x:Key="ClawOrangeBrush" Color="#FFB86B" />
+
+            <Style x:Key="HandheldButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="46" />
+                <Setter Property="Padding" Value="18,10" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
+

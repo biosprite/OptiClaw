@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptiClaw.Core", "src\OptiClaw.Core\OptiClaw.Core.csproj", "{E69B6A98-E698-414B-A2AB-69B878424CB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptiClaw", "src\OptiClaw\OptiClaw.csproj", "{77E3C8CF-7C6D-487F-BB92-2D71C30982EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptiClaw.Core.Tests", "tests\OptiClaw.Core.Tests\OptiClaw.Core.Tests.csproj", "{1E8A6A73-7AD2-48EC-BAE4-AFA7B01B1DD9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E69B6A98-E698-414B-A2AB-69B878424CB6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E69B6A98-E698-414B-A2AB-69B878424CB6}.Debug|x64.Build.0 = Debug|Any CPU
+		{E69B6A98-E698-414B-A2AB-69B878424CB6}.Release|x64.ActiveCfg = Release|Any CPU
+		{E69B6A98-E698-414B-A2AB-69B878424CB6}.Release|x64.Build.0 = Release|Any CPU
+		{77E3C8CF-7C6D-487F-BB92-2D71C30982EF}.Debug|x64.ActiveCfg = Debug|x64
+		{77E3C8CF-7C6D-487F-BB92-2D71C30982EF}.Debug|x64.Build.0 = Debug|x64
+		{77E3C8CF-7C6D-487F-BB92-2D71C30982EF}.Release|x64.ActiveCfg = Release|x64
+		{77E3C8CF-7C6D-487F-BB92-2D71C30982EF}.Release|x64.Build.0 = Release|x64
+		{1E8A6A73-7AD2-48EC-BAE4-AFA7B01B1DD9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1E8A6A73-7AD2-48EC-BAE4-AFA7B01B1DD9}.Debug|x64.Build.0 = Debug|Any CPU
+		{1E8A6A73-7AD2-48EC-BAE4-AFA7B01B1DD9}.Release|x64.ActiveCfg = Release|Any CPU
+		{1E8A6A73-7AD2-48EC-BAE4-AFA7B01B1DD9}.Release|x64.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
+
