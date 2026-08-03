@@ -1,14 +1,14 @@
 param(
-    [switch]$SkipTests,
-    [switch]$SkipZip
+    [switch]$SkipTests
 )
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $artifactsRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "artifacts"))
-$publishDirectory = [System.IO.Path]::GetFullPath((Join-Path $artifactsRoot "OptiClaw-win-x64"))
-$zipPath = [System.IO.Path]::GetFullPath((Join-Path $artifactsRoot "OptiClaw-win-x64.zip"))
+$publishDirectory = [System.IO.Path]::GetFullPath((Join-Path $artifactsRoot "single-file-publish"))
+$executablePath = [System.IO.Path]::GetFullPath((Join-Path $artifactsRoot "OptiClaw.exe"))
 
-if (-not $publishDirectory.StartsWith($artifactsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+if (-not $publishDirectory.StartsWith($artifactsRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
+    -not $executablePath.StartsWith($artifactsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Refusing to publish outside the repository artifacts directory."
 }
 
@@ -22,6 +22,9 @@ try {
     if (Test-Path -LiteralPath $publishDirectory) {
         Remove-Item -LiteralPath $publishDirectory -Recurse -Force
     }
+    if (Test-Path -LiteralPath $executablePath) {
+        Remove-Item -LiteralPath $executablePath -Force
+    }
 
     New-Item -ItemType Directory -Force -Path $artifactsRoot | Out-Null
     dotnet publish ".\src\OptiClaw\OptiClaw.csproj" `
@@ -29,22 +32,24 @@ try {
         -p:Platform=x64 `
         -r win-x64 `
         --self-contained true `
+        -p:DebugType=None `
+        -p:DebugSymbols=false `
         -o $publishDirectory
     if ($LASTEXITCODE -ne 0) { throw "Publish failed." }
 
-    if (-not $SkipZip) {
-        if (Test-Path -LiteralPath $zipPath) {
-            Remove-Item -LiteralPath $zipPath -Force
-        }
+    $publishedExecutable = Join-Path $publishDirectory "OptiClaw.exe"
+    if (-not (Test-Path -LiteralPath $publishedExecutable -PathType Leaf)) {
+        throw "Single-file executable was not produced."
+    }
 
-        Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $zipPath -CompressionLevel Optimal
-        Write-Host "Created $zipPath"
-    }
-    else {
-        Write-Host "Published $publishDirectory"
-    }
+    Move-Item -LiteralPath $publishedExecutable -Destination $executablePath
+    Remove-Item -LiteralPath $publishDirectory -Recurse -Force
+    Write-Host "Created $executablePath"
 }
 finally {
+    if (Test-Path -LiteralPath $publishDirectory) {
+        Remove-Item -LiteralPath $publishDirectory -Recurse -Force
+    }
     Pop-Location
 }
 

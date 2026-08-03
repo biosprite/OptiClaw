@@ -23,7 +23,7 @@ OptiClaw does not patch game executables, bypass anti-cheat, or inject into a ru
 
 ## Use it
 
-1. Download and extract the latest OptiClaw build, or build it below.
+1. Download the latest `OptiClaw.exe`, or build it below.
 2. Run `OptiClaw.exe`.
 3. Select **Scan libraries**, **Scan folder**, or **Add game**.
 4. Check the detected game executable and install folder. For Unreal games this should normally end in `Binaries\Win64` or `Binaries\WinGDK`.
@@ -51,13 +51,13 @@ dotnet test .\tests\OptiClaw.Core.Tests\OptiClaw.Core.Tests.csproj -c Release
 dotnet build .\src\OptiClaw\OptiClaw.csproj -c Release -p:Platform=x64
 ```
 
-To create a self-contained Windows App SDK build and ZIP:
+To create a compressed, self-contained Windows App SDK executable:
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-The ZIP is written to `artifacts\OptiClaw-win-x64.zip`. The app is unpackaged and carries its Windows App SDK/.NET runtime with it, so it can run directly from the extracted folder.
+The single-file build is written to `artifacts\OptiClaw.exe`. The app is unpackaged and carries its Windows App SDK/.NET runtime inside the executable, so no separate runtime installation is required. Windows extracts those dependencies to a temporary application cache when the app starts.
 
 ## How installs stay recoverable
 
