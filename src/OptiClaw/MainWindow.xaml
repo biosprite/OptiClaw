@@ -111,7 +111,7 @@
                                             <ColumnDefinition Width="8" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <Border Background="#E12A45" CornerRadius="4" Margin="0,2" />
+                                        <Border Background="{Binding StatusKind, Mode=OneWay, Converter={StaticResource GameStatusBrushConverter}}" CornerRadius="4" Margin="0,2" />
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
                                             <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{x:Bind StatusSummary, Mode=OneWay}" FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextTrimming="CharacterEllipsis" />
@@ -151,7 +151,7 @@
                                     <TextBlock x:Name="SelectedGameNameText" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
                                     <TextBlock x:Name="SelectedGameSourceText" Margin="0,5,0,0" Foreground="{StaticResource ClawMutedBrush}" />
                                 </StackPanel>
-                                <Border Grid.Column="1" x:Name="InstallStateBadge" Background="#27332F" CornerRadius="12" Padding="10,5" VerticalAlignment="Top">
+                                <Border Grid.Column="1" x:Name="InstallStateBadge" Background="{StaticResource ClawReadyBadgeBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Top">
                                     <TextBlock x:Name="InstallStateText" Text="READY" FontSize="11" CharacterSpacing="100" Foreground="{StaticResource ClawGreenBrush}" FontWeight="SemiBold" />
                                 </Border>
                             </Grid>
@@ -243,9 +243,9 @@
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="9">
                 <ProgressRing x:Name="BusyRing" Width="18" Height="18" IsActive="False" />
-                <TextBlock x:Name="StatusText" Text="Ready" Foreground="{StaticResource ClawMutedBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusText" Text="Ready" Foreground="White" VerticalAlignment="Center" />
             </StackPanel>
-            <ProgressBar x:Name="WorkProgress" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" VerticalAlignment="Center" />
+            <ProgressBar x:Name="WorkProgress" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" Foreground="{StaticResource ClawXeSSBlueBrush}" VerticalAlignment="Center" />
         </Grid>
     </Grid>
 </Window>

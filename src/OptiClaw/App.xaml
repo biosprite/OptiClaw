@@ -1,7 +1,8 @@
 <Application
     x:Class="OptiClaw.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:OptiClaw">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -11,8 +12,13 @@
             <SolidColorBrush x:Key="ClawCardBrush" Color="#151A22" />
             <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#2B3340" />
             <SolidColorBrush x:Key="ClawMutedBrush" Color="#AAB3C2" />
+            <SolidColorBrush x:Key="ClawRedBrush" Color="#E12A45" />
             <SolidColorBrush x:Key="ClawGreenBrush" Color="#55D6A8" />
+            <SolidColorBrush x:Key="ClawXeSSBlueBrush" Color="#00AEEF" />
+            <SolidColorBrush x:Key="ClawXeSSBlueBadgeBrush" Color="#102C3A" />
+            <SolidColorBrush x:Key="ClawReadyBadgeBrush" Color="#27332F" />
             <SolidColorBrush x:Key="ClawOrangeBrush" Color="#FFB86B" />
+            <local:GameStatusBrushConverter x:Key="GameStatusBrushConverter" />
 
             <Style x:Key="HandheldButtonStyle" TargetType="Button">
                 <Setter Property="MinHeight" Value="46" />

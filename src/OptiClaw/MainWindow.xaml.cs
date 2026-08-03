@@ -323,7 +323,10 @@ public sealed partial class MainWindow : Window
         DeploymentPathText.Text = game.DeploymentDirectory;
         InstallStateText.Text = game.IsInstalled ? "INSTALLED" : "READY";
         InstallStateText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
-            game.IsInstalled ? "ClawGreenBrush" : "ClawOrangeBrush"];
+            game.IsInstalled ? "ClawXeSSBlueBrush" : "ClawOrangeBrush"];
+        InstallStateBadge.Background = game.IsInstalled
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawXeSSBlueBadgeBrush"]
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawReadyBadgeBrush"];
         InstallButton.IsEnabled = !_isBusy && !game.IsInstalled;
         RestoreButton.IsEnabled = !_isBusy && game.IsInstalled;
         ProxyDllCombo.IsEnabled = !_isBusy && !game.IsInstalled;

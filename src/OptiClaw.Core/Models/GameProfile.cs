@@ -4,6 +4,13 @@ using System.Text.Json.Serialization;
 
 namespace OptiClaw.Core.Models;
 
+public enum GameStatusKind
+{
+    Unsupported,
+    Ready,
+    Installed
+}
+
 public sealed class GameProfile : INotifyPropertyChanged
 {
     private string _name = string.Empty;
@@ -56,6 +63,8 @@ public sealed class GameProfile : INotifyPropertyChanged
             if (SetField(ref _detectedTechnologies, value))
             {
                 OnPropertyChanged(nameof(TechnologySummary));
+                OnPropertyChanged(nameof(StatusSummary));
+                OnPropertyChanged(nameof(StatusKind));
             }
         }
     }
@@ -75,6 +84,7 @@ public sealed class GameProfile : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(IsInstalled));
                 OnPropertyChanged(nameof(StatusSummary));
+                OnPropertyChanged(nameof(StatusKind));
             }
         }
     }
@@ -93,6 +103,13 @@ public sealed class GameProfile : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool IsInstalled => ActiveInstallId is not null;
+
+    [JsonIgnore]
+    public GameStatusKind StatusKind => IsInstalled
+        ? GameStatusKind.Installed
+        : DetectedTechnologies.Length > 0
+            ? GameStatusKind.Ready
+            : GameStatusKind.Unsupported;
 
     [JsonIgnore]
     public string TechnologySummary => DetectedTechnologies.Length == 0
