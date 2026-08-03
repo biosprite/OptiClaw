@@ -19,9 +19,7 @@
                     <FontIcon Glyph="&#xE950;" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <TextBlock Text="OPTICLAW" FontSize="15" FontWeight="SemiBold" CharacterSpacing="120" VerticalAlignment="Center" />
-                <Border Background="#222A36" CornerRadius="10" Padding="8,3" Margin="4,0,0,0">
-                    <TextBlock Text="MSI CLAW" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource ClawMutedBrush}" />
-                </Border>
+                <TextBlock Text="- Lightweight OptiScaler Client for Intel Devices" FontSize="12" Foreground="White" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
@@ -31,8 +29,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="XeSS, where your games expect DLSS or FSR." FontSize="28" FontWeight="SemiBold" />
-                <TextBlock Text="Find a game, choose its proxy, and OptiClaw handles the reversible install." Margin="0,6,0,0" Foreground="{StaticResource ClawMutedBrush}" />
+                <TextBlock Text="Find a game, choose its proxy, and OptiClaw handles the reversible install." Foreground="{StaticResource ClawMutedBrush}" />
             </StackPanel>
             <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <TextBlock Text="UPSTREAM" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Right" />
