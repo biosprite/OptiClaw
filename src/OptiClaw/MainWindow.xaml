@@ -5,7 +5,7 @@
     xmlns:models="using:OptiClaw.Core.Models"
     Title="OptiClaw">
 
-    <Grid x:Name="RootGrid" Loaded="RootGrid_Loaded" Background="#0D1117" XYFocusKeyboardNavigation="Enabled">
+    <Grid x:Name="RootGrid" Loaded="RootGrid_Loaded" RequestedTheme="Default" Background="{ThemeResource ClawPageBrush}" XYFocusKeyboardNavigation="Enabled">
         <Grid.RowDefinitions>
             <RowDefinition Height="52" />
             <RowDefinition Height="Auto" />
@@ -13,13 +13,13 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="20,0,140,0" Background="#0D1117">
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="20,0,140,0" Background="{ThemeResource ClawPageBrush}">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
                 <Border Width="28" Height="28" CornerRadius="7" Background="#E12A45">
                     <FontIcon Glyph="&#xE950;" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <TextBlock Text="OPTICLAW" FontSize="15" FontWeight="SemiBold" CharacterSpacing="120" VerticalAlignment="Center" />
-                <TextBlock Text="- Lightweight OptiScaler Client for Intel Devices" FontSize="12" Foreground="White" VerticalAlignment="Center" />
+                <TextBlock Text="- Lightweight OptiScaler Client for Intel Devices" FontSize="12" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
@@ -29,12 +29,105 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="Find a game, choose its proxy, and OptiClaw handles the reversible install." Foreground="{StaticResource ClawMutedBrush}" />
+                <TextBlock Text="Find a game, choose its proxy, and OptiClaw handles the reversible install." Foreground="{ThemeResource ClawMutedBrush}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock Text="UPSTREAM" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Right" />
-                <TextBlock x:Name="ReleaseVersionText" Text="Not checked" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Right" />
-            </StackPanel>
+            <Grid Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" ColumnSpacing="18" RowSpacing="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="16" />
+                    <RowDefinition Height="40" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    Grid.Row="1"
+                    Style="{StaticResource HandheldButtonStyle}"
+                    MinHeight="40"
+                    Height="40"
+                    Padding="12,0"
+                    HorizontalAlignment="Right"
+                    Click="ScanLibraries_Click"
+                    ToolTipService.ToolTip="Scan installed Steam and Xbox libraries"
+                    AutomationProperties.Name="Scan installed game libraries">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon Glyph="&#xE721;" FontSize="15" />
+                        <TextBlock Text="Scan libraries" />
+                    </StackPanel>
+                </Button>
+                <TextBlock
+                    Grid.Column="1"
+                    Text="UPSTREAM"
+                    Margin="0,-1,0,1"
+                    Style="{StaticResource HeaderSectionLabelStyle}" />
+                <HyperlinkButton
+                    x:Name="UpstreamLink"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    NavigateUri="https://github.com/optiscaler/OptiScaler"
+                    FontSize="15"
+                    FontWeight="SemiBold"
+                    Padding="0"
+                    HorizontalAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    ToolTipService.ToolTip="Open the official OptiScaler GitHub repository">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Viewbox Width="16" Height="16">
+                            <Path
+                                Width="16"
+                                Height="16"
+                                Stretch="Uniform"
+                                Fill="{Binding Foreground, ElementName=UpstreamLink}"
+                                Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.6-.18-3.28-.8-3.28-3.56 0-.79.28-1.43.74-1.93-.07-.18-.32-.91.07-1.9 0 0 .6-.19 1.97.74A6.865 6.865 0 0 1 8 4.69c.61 0 1.23.08 1.79.23 1.36-.93 1.96-.74 1.96-.74.39.99.14 1.72.07 1.9.46.5.74 1.14.74 1.93 0 2.77-1.69 3.38-3.3 3.56.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                        </Viewbox>
+                        <TextBlock x:Name="ReleaseVersionText" Text="Not checked" />
+                    </StackPanel>
+                </HyperlinkButton>
+                <TextBlock
+                    Grid.Column="2"
+                    Text="THEME"
+                    Style="{StaticResource HeaderSectionLabelStyle}" />
+                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                        <ToggleButton
+                            x:Name="LightThemeButton"
+                            Tag="Light"
+                            Style="{StaticResource HandheldToggleButtonStyle}"
+                            Width="40"
+                            Height="40"
+                            Padding="0"
+                            Click="ThemeButton_Click"
+                            ToolTipService.ToolTip="Light theme"
+                            AutomationProperties.Name="Light theme">
+                            <FontIcon Glyph="&#xE706;" FontSize="15" />
+                        </ToggleButton>
+                        <ToggleButton
+                            x:Name="DarkThemeButton"
+                            Tag="Dark"
+                            Style="{StaticResource HandheldToggleButtonStyle}"
+                            Width="40"
+                            Height="40"
+                            Padding="0"
+                            Click="ThemeButton_Click"
+                            ToolTipService.ToolTip="Dark theme"
+                            AutomationProperties.Name="Dark theme">
+                            <FontIcon Glyph="&#xE708;" FontSize="15" />
+                        </ToggleButton>
+                        <ToggleButton
+                            x:Name="SystemThemeButton"
+                            Tag="Default"
+                            Style="{StaticResource HandheldToggleButtonStyle}"
+                            Width="40"
+                            Height="40"
+                            Padding="0"
+                            IsChecked="True"
+                            Click="ThemeButton_Click"
+                            ToolTipService.ToolTip="Use system settings"
+                            AutomationProperties.Name="Use system theme">
+                            <FontIcon Glyph="&#xE7F4;" FontSize="15" />
+                        </ToggleButton>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <Grid Grid.Row="2" Margin="24,0,24,18" ColumnSpacing="16">
@@ -43,51 +136,64 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{StaticResource ClawCardBrush}" BorderBrush="{StaticResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14">
+            <Border Grid.Column="0" Background="{ThemeResource ClawCardBrush}" BorderBrush="{ThemeResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Grid>
+                    <TextBlock x:Name="GameCountText" Text="GAME LIBRARY - 0 GAMES" FontSize="11" CharacterSpacing="110" Foreground="{ThemeResource ClawMutedBrush}" />
+
+                    <AutoSuggestBox
+                        x:Name="GameSearchBox"
+                        Grid.Row="1"
+                        Height="40"
+                        Margin="0,10,0,0"
+                        HorizontalAlignment="Stretch"
+                        QueryIcon="Find"
+                        PlaceholderText="Search added games"
+                        TextChanged="GameSearchBox_TextChanged"
+                        KeyDown="GameSearchBox_KeyDown"
+                        AutomationProperties.Name="Search added games" />
+
+                    <Grid Grid.Row="2" Margin="0,8,0,12" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="GAME LIBRARY" FontSize="11" CharacterSpacing="110" Foreground="{StaticResource ClawMutedBrush}" />
-                            <TextBlock x:Name="GameCountText" Text="0 games" FontSize="20" FontWeight="SemiBold" Margin="0,3,0,0" />
-                        </StackPanel>
-                        <Button Grid.Column="1" Click="ScanLibraries_Click" ToolTipService.ToolTip="Scan Steam and Xbox libraries" Width="44" Height="44" Padding="0" CornerRadius="8">
-                            <FontIcon Glyph="&#xE721;" FontSize="16" />
-                        </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="1" Margin="0,12" ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Click="AddGame_Click" Style="{StaticResource HandheldButtonStyle}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Grid.Column="0" Click="AddGame_Click" Style="{StaticResource HandheldButtonStyle}" Padding="10">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon Glyph="&#xE710;" FontSize="14" />
                                 <TextBlock Text="Add game" />
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="1" Click="ScanFolder_Click" Style="{StaticResource HandheldButtonStyle}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Grid.Column="1" Click="ScanFolder_Click" Style="{StaticResource HandheldButtonStyle}" Padding="10">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon Glyph="&#xED25;" FontSize="14" />
                                 <TextBlock Text="Scan folder" />
                             </StackPanel>
                         </Button>
+                        <Button
+                            x:Name="SortGamesButton"
+                            Grid.Column="2"
+                            Style="{StaticResource HandheldButtonStyle}"
+                            Width="44"
+                            Padding="0"
+                            Click="SortGames_Click"
+                            ToolTipService.ToolTip="Sort games Z to A"
+                            AutomationProperties.Name="Sort games Z to A">
+                            <SymbolIcon Symbol="Sort" />
+                        </Button>
                     </Grid>
 
-                    <Grid Grid.Row="2">
+                    <Grid Grid.Row="3">
                         <ListView
                             x:Name="GamesList"
-                            ItemsSource="{x:Bind Games}"
+                            ItemsSource="{x:Bind VisibleGames}"
                             SelectionChanged="GamesList_SelectionChanged"
                             IsItemClickEnabled="False"
                             SelectionMode="Single"
@@ -111,7 +217,7 @@
                                         <Border Background="{Binding StatusKind, Mode=OneWay, Converter={StaticResource GameStatusBrushConverter}}" CornerRadius="4" Margin="0,2" />
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
                                             <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{x:Bind StatusSummary, Mode=OneWay}" FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{x:Bind StatusSummary, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -119,22 +225,22 @@
                         </ListView>
 
                         <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                            <FontIcon Glyph="&#xE8B7;" FontSize="32" Foreground="{StaticResource ClawMutedBrush}" />
-                            <TextBlock Text="No compatible games yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                            <TextBlock Text="Add an EXE or scan your libraries." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Center" />
+                            <FontIcon Glyph="&#xE8B7;" FontSize="32" Foreground="{ThemeResource ClawMutedBrush}" />
+                            <TextBlock x:Name="EmptyLibraryTitle" Text="No compatible games yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="EmptyLibraryHelpText" Text="Add an EXE or scan a folder." FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" HorizontalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Background="{StaticResource ClawCardBrush}" BorderBrush="{StaticResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12">
+            <Border Grid.Column="1" Background="{ThemeResource ClawCardBrush}" BorderBrush="{ThemeResource ClawCardBorderBrush}" BorderThickness="1" CornerRadius="12">
                 <Grid>
                     <StackPanel x:Name="EmptyDetailsPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                        <Border Width="64" Height="64" CornerRadius="16" Background="#222A36">
-                            <FontIcon Glyph="&#xE7FC;" FontSize="28" Foreground="{StaticResource ClawMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border Width="64" Height="64" CornerRadius="16" Background="{ThemeResource ClawInsetBrush}">
+                            <FontIcon Glyph="&#xE7FC;" FontSize="28" Foreground="{ThemeResource ClawMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <TextBlock Text="Choose a game" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <TextBlock Text="Its detected upscalers and install controls will appear here." MaxWidth="380" Foreground="{StaticResource ClawMutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                        <TextBlock Text="Its detected upscalers and install controls will appear here." MaxWidth="380" Foreground="{ThemeResource ClawMutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
 
                     <ScrollViewer x:Name="DetailsPanel" Visibility="Collapsed" Padding="28" HorizontalScrollBarVisibility="Disabled">
@@ -146,7 +252,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock x:Name="SelectedGameNameText" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                    <TextBlock x:Name="SelectedGameSourceText" Margin="0,5,0,0" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <TextBlock x:Name="SelectedGameSourceText" Margin="0,5,0,0" Foreground="{ThemeResource ClawMutedBrush}" />
                                     <InfoBar
                                         Margin="0,12,0,0"
                                         IsOpen="True"
@@ -160,21 +266,21 @@
                                 </Border>
                             </Grid>
 
-                            <Border Background="#10151C" CornerRadius="10" Padding="18">
+                            <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
                                 <StackPanel Spacing="8">
-                                    <TextBlock Text="DETECTED COMPONENTS" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <TextBlock Text="DETECTED COMPONENTS" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
                                     <TextBlock x:Name="DetectedInputsText" Text="None found" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="Libraries found in the game folder. Their presence does not guarantee every related feature is enabled in-game." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="Libraries found in the game folder. Their presence does not guarantee every related feature is enabled in-game." FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
 
                             <StackPanel Spacing="7">
-                                <TextBlock Text="GAME EXECUTABLE" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                <TextBlock Text="GAME EXECUTABLE" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
                                 <TextBlock x:Name="ExecutablePathText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
                             </StackPanel>
 
                             <StackPanel Spacing="7">
-                                <TextBlock Text="INSTALL BESIDE" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                <TextBlock Text="INSTALL BESIDE" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
                                 <TextBlock x:Name="DeploymentPathText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" />
                             </StackPanel>
 
@@ -185,7 +291,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Spacing="7">
-                                    <TextBlock Text="PROXY DLL" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
+                                    <TextBlock Text="PROXY DLL" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
                                     <ComboBox x:Name="ProxyDllCombo" ItemsSource="{x:Bind ProxyDllNames}" SelectedIndex="0" MinHeight="44" HorizontalAlignment="Stretch" />
                                 </StackPanel>
                                 <Button x:Name="InstallButton" Grid.Column="1" Click="Install_Click" Style="{StaticResource AccentButtonStyle}" MinHeight="44" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" CornerRadius="8">
@@ -208,16 +314,31 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Click="RescanGame_Click" Style="{StaticResource HandheldButtonStyle}" Content="Scan again" />
-                                <Button Grid.Column="1" Click="OpenFolder_Click" Style="{StaticResource HandheldButtonStyle}" Content="Open folder" />
-                                <Button Grid.Column="2" Click="RemoveGame_Click" Style="{StaticResource HandheldButtonStyle}" Content="Remove" />
+                                <Button Grid.Column="0" Click="RescanGame_Click" Style="{StaticResource HandheldButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                                        <TextBlock Text="Scan again" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1" Click="OpenFolder_Click" Style="{StaticResource HandheldButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <FontIcon Glyph="&#xE838;" FontSize="14" />
+                                        <TextBlock Text="Open folder" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Click="RemoveGame_Click" Style="{StaticResource HandheldButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                        <TextBlock Text="Remove" />
+                                    </StackPanel>
+                                </Button>
                             </Grid>
 
                             <ContentControl
                                 x:Name="FrameGenerationPanel"
                                 IsEnabled="False"
                                 HorizontalContentAlignment="Stretch">
-                                <Border Background="#10151C" CornerRadius="10" Padding="18">
+                                <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
                                     <StackPanel Spacing="12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -225,8 +346,8 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Spacing="3">
-                                            <TextBlock Text="FRAME GENERATION" FontSize="10" CharacterSpacing="120" Foreground="{StaticResource ClawMutedBrush}" />
-                                            <TextBlock Text="Configure OptiScaler FG without opening its in-game overlay." FontSize="12" Foreground="{StaticResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                            <TextBlock Text="FRAME GENERATION" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
+                                            <TextBlock Text="Configure OptiScaler FG without opening its in-game overlay." FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <ToggleSwitch
                                             x:Name="FrameGenerationEnabledToggle"
@@ -245,7 +366,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Spacing="6">
-                                            <TextBlock Text="FG INPUT" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <TextBlock Text="FG INPUT" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
                                             <ComboBox
                                                 x:Name="FrameGenerationInputCombo"
                                                 ItemsSource="{x:Bind FrameGenerationInputOptions}"
@@ -255,7 +376,7 @@
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Spacing="6">
-                                            <TextBlock Text="FG OUTPUT" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <TextBlock Text="FG OUTPUT" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
                                             <ComboBox
                                                 x:Name="FrameGenerationOutputCombo"
                                                 ItemsSource="{x:Bind FrameGenerationOutputOptions}"
@@ -265,7 +386,7 @@
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2" Spacing="6">
-                                            <TextBlock Text="MULTIPLIER" FontSize="10" CharacterSpacing="100" Foreground="{StaticResource ClawMutedBrush}" />
+                                            <TextBlock Text="MULTIPLIER" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
                                             <ComboBox
                                                 x:Name="FrameGenerationMultiplierCombo"
                                                 ItemsSource="{x:Bind FrameGenerationMultiplierOptions}"
@@ -287,7 +408,7 @@
                                         x:Name="FrameGenerationHelpText"
                                         Text="Install XeSS to configure frame generation."
                                         FontSize="11"
-                                        Foreground="{StaticResource ClawMutedBrush}"
+                                        Foreground="{ThemeResource ClawMutedBrush}"
                                         TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
@@ -298,14 +419,14 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" Background="#111720" Padding="24,10">
+        <Grid Grid.Row="3" Background="{ThemeResource ClawFooterBrush}" Padding="24,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="260" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="9">
                 <ProgressRing x:Name="BusyRing" Width="18" Height="18" IsActive="False" />
-                <TextBlock x:Name="StatusText" Text="Ready" Foreground="White" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusText" Text="Ready" VerticalAlignment="Center" />
             </StackPanel>
             <ProgressBar x:Name="WorkProgress" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" Foreground="{StaticResource ClawXeSSBlueBrush}" VerticalAlignment="Center" />
         </Grid>

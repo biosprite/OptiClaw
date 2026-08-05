@@ -11,6 +11,7 @@ public sealed class AppDataPaths
 
     public string Root { get; }
     public string ProfilesFile => Path.Combine(Root, "games.json");
+    public string SettingsFile => Path.Combine(Root, "settings.json");
     public string CacheDirectory => Path.Combine(Root, "Cache");
     public string BackupsDirectory => Path.Combine(Root, "Backups");
 

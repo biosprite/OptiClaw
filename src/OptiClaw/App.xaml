@@ -9,9 +9,33 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <SolidColorBrush x:Key="ClawCardBrush" Color="#151A22" />
-            <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#2B3340" />
-            <SolidColorBrush x:Key="ClawMutedBrush" Color="#AAB3C2" />
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="ClawPageBrush" Color="#0D1117" />
+                    <SolidColorBrush x:Key="ClawCardBrush" Color="#151A22" />
+                    <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#2B3340" />
+                    <SolidColorBrush x:Key="ClawInsetBrush" Color="#10151C" />
+                    <SolidColorBrush x:Key="ClawFooterBrush" Color="#111720" />
+                    <SolidColorBrush x:Key="ClawMutedBrush" Color="#AAB3C2" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ClawPageBrush" Color="#0D1117" />
+                    <SolidColorBrush x:Key="ClawCardBrush" Color="#151A22" />
+                    <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#2B3340" />
+                    <SolidColorBrush x:Key="ClawInsetBrush" Color="#10151C" />
+                    <SolidColorBrush x:Key="ClawFooterBrush" Color="#111720" />
+                    <SolidColorBrush x:Key="ClawMutedBrush" Color="#AAB3C2" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="ClawPageBrush" Color="#F5F7FA" />
+                    <SolidColorBrush x:Key="ClawCardBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ClawCardBorderBrush" Color="#D7DCE3" />
+                    <SolidColorBrush x:Key="ClawInsetBrush" Color="#EEF1F5" />
+                    <SolidColorBrush x:Key="ClawFooterBrush" Color="#E9EDF2" />
+                    <SolidColorBrush x:Key="ClawMutedBrush" Color="#5F6875" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
             <SolidColorBrush x:Key="ClawRedBrush" Color="#E12A45" />
             <SolidColorBrush x:Key="ClawGreenBrush" Color="#55D6A8" />
             <SolidColorBrush x:Key="ClawXeSSBlueBrush" Color="#00AEEF" />
@@ -25,6 +49,23 @@
                 <Setter Property="Padding" Value="18,10" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
+            </Style>
+
+            <Style x:Key="HandheldToggleButtonStyle" TargetType="ToggleButton">
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="CornerRadius" Value="8" />
+            </Style>
+
+            <Style x:Key="HeaderSectionLabelStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="CharacterSpacing" Value="120" />
+                <Setter Property="Foreground" Value="{ThemeResource ClawMutedBrush}" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="TextAlignment" Value="Center" />
+                <Setter Property="LineHeight" Value="14" />
+                <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

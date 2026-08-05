@@ -3,11 +3,13 @@ using System.Diagnostics;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using OptiClaw.Core.Models;
 using OptiClaw.Core.Services;
 using Windows.Graphics;
-using Windows.Storage.Pickers;
 using WinRT.Interop;
 
 namespace OptiClaw;
@@ -33,19 +35,26 @@ public sealed partial class MainWindow : Window
     private readonly AppDataPaths _paths = new();
     private readonly GameDetector _detector = new();
     private readonly ProfileStore _profileStore;
+    private readonly SettingsStore _settingsStore;
     private readonly LibraryScanner _libraryScanner;
     private readonly OptiScalerInstaller _installer;
     private readonly OptiScalerReleaseClient _releaseClient;
     private bool _isBusy;
+    private bool _sortAscending = true;
+    private AppSettings _settings = new();
     private Guid? _loadedFrameGenerationInstallId;
+    private AppWindow? _appWindow;
 
     public MainWindow()
     {
         InitializeComponent();
         _profileStore = new ProfileStore(_paths);
+        _settingsStore = new SettingsStore(_paths);
         _libraryScanner = new LibraryScanner(_detector);
         _installer = new OptiScalerInstaller(_paths);
         _releaseClient = new OptiScalerReleaseClient(_paths);
+        RootGrid.ActualThemeChanged += (_, _) => UpdateTitleBarColors();
+        LoadThemePreference();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -54,6 +63,7 @@ public sealed partial class MainWindow : Window
     }
 
     public ObservableCollection<GameProfile> Games { get; } = [];
+    public ObservableCollection<GameProfile> VisibleGames { get; } = [];
     public IReadOnlyList<string> ProxyDllNames => OptiScalerInstaller.SupportedProxyDllNames;
     public IReadOnlyList<FrameGenerationOption> FrameGenerationInputOptions { get; } =
     [
@@ -74,6 +84,91 @@ public sealed partial class MainWindow : Window
 
     private GameProfile? SelectedGame => GamesList.SelectedItem as GameProfile;
 
+    private void GameSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) =>
+        UpdateLibraryState();
+
+    private void GameSearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        GameSearchBox.IsSuggestionListOpen = false;
+        SortGamesButton.Focus(FocusState.Programmatic);
+    }
+
+    private void SortGames_Click(object sender, RoutedEventArgs e)
+    {
+        _sortAscending = !_sortAscending;
+        var accessibleLabel = _sortAscending ? "Sort games Z to A" : "Sort games A to Z";
+        ToolTipService.SetToolTip(SortGamesButton, accessibleLabel);
+        AutomationProperties.SetName(SortGamesButton, accessibleLabel);
+        UpdateLibraryState();
+    }
+
+    private void ThemeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton { Tag: string themeName }
+            || !Enum.TryParse(themeName, out ElementTheme theme))
+        {
+            return;
+        }
+
+        ApplyTheme(theme);
+        SaveThemePreference(theme);
+    }
+
+    private void LoadThemePreference()
+    {
+        var theme = ElementTheme.Default;
+        try
+        {
+            _settings = _settingsStore.Load();
+            if (!Enum.TryParse(_settings.Theme, out theme))
+            {
+                theme = ElementTheme.Default;
+            }
+        }
+        catch (IOException exception)
+        {
+            Debug.WriteLine($"Could not load the saved theme: {exception}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Debug.WriteLine($"Could not load the saved theme: {exception}");
+        }
+
+        ApplyTheme(theme);
+    }
+
+    private void ApplyTheme(ElementTheme theme)
+    {
+        LightThemeButton.IsChecked = theme == ElementTheme.Light;
+        DarkThemeButton.IsChecked = theme == ElementTheme.Dark;
+        SystemThemeButton.IsChecked = theme == ElementTheme.Default;
+        RootGrid.RequestedTheme = theme;
+        UpdateTitleBarColors();
+    }
+
+    private void SaveThemePreference(ElementTheme theme)
+    {
+        try
+        {
+            _settings.Theme = theme.ToString();
+            _settingsStore.Save(_settings);
+        }
+        catch (IOException exception)
+        {
+            Debug.WriteLine($"Could not save the theme preference: {exception}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Debug.WriteLine($"Could not save the theme preference: {exception}");
+        }
+    }
+
     private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
         await RunBusyAsync("Loading game library…", async () =>
@@ -84,16 +179,23 @@ public sealed partial class MainWindow : Window
             }
         });
         UpdateLibraryState();
-        GamesList.SelectedIndex = Games.Count > 0 ? 0 : -1;
+        GamesList.SelectedIndex = VisibleGames.Count > 0 ? 0 : -1;
 
         _ = CheckLatestReleaseAsync();
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new FileOpenPicker();
-        picker.FileTypeFilter.Add(".exe");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
+        var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(windowId)
+        {
+            Title = "Add a game executable",
+            CommitButtonText = "Add game",
+            InitialFileTypeIndex = 0,
+            ViewMode = Microsoft.Windows.Storage.Pickers.PickerViewMode.List
+        };
+        picker.FileTypeChoices.Add("Executable files (*.exe)", new List<string> { ".exe" });
+        picker.FileTypeChoices.Add("All files (*.*)", new List<string> { "*" });
         var file = await picker.PickSingleFileAsync();
         if (file is null)
         {
@@ -101,8 +203,9 @@ public sealed partial class MainWindow : Window
         }
 
         var executablePath = file.Path;
+        var executableName = Path.GetFileNameWithoutExtension(executablePath);
         var root = FindLikelyInstallRoot(executablePath);
-        await RunBusyAsync($"Scanning {file.DisplayName}…", async () =>
+        await RunBusyAsync($"Scanning {executableName}…", async () =>
         {
             var result = await _detector.ScanAsync(root, executablePath);
             if (result is null)
@@ -135,19 +238,26 @@ public sealed partial class MainWindow : Window
 
     private async void ScanFolder_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder };
-        picker.FileTypeFilter.Add("*");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
+        var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(windowId)
+        {
+            Title = "Choose a game folder",
+            CommitButtonText = "Scan folder",
+            SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.ComputerFolder,
+            ViewMode = Microsoft.Windows.Storage.Pickers.PickerViewMode.List
+        };
         var folder = await picker.PickSingleFolderAsync();
         if (folder is null)
         {
             return;
         }
 
+        var folderPath = folder.Path;
+        var folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(folderPath));
         var progress = new Progress<string>(message => StatusText.Text = message);
-        await RunBusyAsync($"Scanning {folder.Name}…", async () =>
+        await RunBusyAsync($"Scanning {folderName}…", async () =>
         {
-            var results = await _libraryScanner.ScanFolderAsync(folder.Path, progress);
+            var results = await _libraryScanner.ScanFolderAsync(folderPath, progress);
             foreach (var result in results)
             {
                 AddOrUpdate(result);
@@ -315,7 +425,7 @@ public sealed partial class MainWindow : Window
         Games.Remove(game);
         await _profileStore.SaveAsync(Games);
         UpdateLibraryState();
-        GamesList.SelectedIndex = Games.Count > 0 ? 0 : -1;
+        GamesList.SelectedIndex = VisibleGames.Count > 0 ? 0 : -1;
     }
 
     private async Task CheckLatestReleaseAsync()
@@ -346,7 +456,10 @@ public sealed partial class MainWindow : Window
         }
 
         UpdateLibraryState();
-        GamesList.SelectedItem = existing;
+        if (VisibleGames.Contains(existing))
+        {
+            GamesList.SelectedItem = existing;
+        }
     }
 
     private static void ApplyDetection(GameProfile game, GameDetectionResult result)
@@ -362,9 +475,41 @@ public sealed partial class MainWindow : Window
 
     private void UpdateLibraryState()
     {
-        GameCountText.Text = $"{Games.Count} game{(Games.Count == 1 ? string.Empty : "s")}";
-        EmptyLibraryPanel.Visibility = Games.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RefreshVisibleGames();
+        GameCountText.Text = $"GAME LIBRARY - {Games.Count} GAME{(Games.Count == 1 ? string.Empty : "S")}";
+        var hasNoVisibleGames = VisibleGames.Count == 0;
+        EmptyLibraryPanel.Visibility = hasNoVisibleGames ? Visibility.Visible : Visibility.Collapsed;
+        EmptyLibraryTitle.Text = Games.Count == 0 ? "No compatible games yet" : "No matching games";
+        EmptyLibraryHelpText.Text = Games.Count == 0
+            ? "Add an EXE or scan a folder."
+            : "Try a different search.";
         UpdateSelectionState();
+    }
+
+    private void RefreshVisibleGames()
+    {
+        var selectedGame = SelectedGame;
+        var query = GameSearchBox.Text.Trim();
+        var matchingGames = Games.Where(game =>
+            query.Length == 0 || game.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+        matchingGames = _sortAscending
+            ? matchingGames.OrderBy(game => game.Name, StringComparer.CurrentCultureIgnoreCase)
+            : matchingGames.OrderByDescending(game => game.Name, StringComparer.CurrentCultureIgnoreCase);
+
+        VisibleGames.Clear();
+        foreach (var game in matchingGames)
+        {
+            VisibleGames.Add(game);
+        }
+
+        if (selectedGame is not null && VisibleGames.Contains(selectedGame))
+        {
+            GamesList.SelectedItem = selectedGame;
+        }
+        else
+        {
+            GamesList.SelectedIndex = VisibleGames.Count > 0 ? 0 : -1;
+        }
     }
 
     private void UpdateSelectionState()
@@ -572,12 +717,28 @@ public sealed partial class MainWindow : Window
     private void ConfigureWindow()
     {
         var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new SizeInt32(1180, 760));
+        _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.Resize(new SizeInt32(1180, 760));
         if (AppWindowTitleBar.IsCustomizationSupported())
         {
-            appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
-            appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            _appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+            _appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            UpdateTitleBarColors();
         }
+    }
+
+    private void UpdateTitleBarColors()
+    {
+        if (_appWindow is null || !AppWindowTitleBar.IsCustomizationSupported())
+        {
+            return;
+        }
+
+        var foreground = RootGrid.ActualTheme == ElementTheme.Light ? Colors.Black : Colors.White;
+        var inactiveForeground = RootGrid.ActualTheme == ElementTheme.Light ? Colors.DimGray : Colors.LightGray;
+        _appWindow.TitleBar.ButtonForegroundColor = foreground;
+        _appWindow.TitleBar.ButtonHoverForegroundColor = foreground;
+        _appWindow.TitleBar.ButtonPressedForegroundColor = foreground;
+        _appWindow.TitleBar.ButtonInactiveForegroundColor = inactiveForeground;
     }
 }
