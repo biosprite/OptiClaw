@@ -6,7 +6,6 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using OptiClaw.Core.Models;
@@ -58,14 +57,12 @@ public sealed partial class MainWindow : Window
     private nint _windowHandle;
     private bool _hasInitialized;
     private bool _startupReady;
-    private bool? _isCompactLayout;
     private double? _lastRestoredWindowWidth;
     private double? _lastRestoredWindowHeight;
     private bool _isWindowPlacementReady;
     private bool _shouldRestoreMaximized;
     private long _startupStartedAt;
-    private nint _nativeBackgroundBrush;
-    private nint _previousNativeBackgroundBrush;
+    private double _windowScale = 1;
 
     public MainWindow()
     {
@@ -75,7 +72,10 @@ public sealed partial class MainWindow : Window
         _libraryScanner = new LibraryScanner(_detector);
         _installer = new OptiScalerInstaller(_paths);
         _releaseClient = new OptiScalerReleaseClient(_paths);
-        RootGrid.ActualThemeChanged += (_, _) => UpdateTitleBarColors();
+        RootGrid.ActualThemeChanged += (_, _) =>
+        {
+            UpdateTitleBarColors();
+        };
         LoadThemePreference();
 
         ExtendsContentIntoTitleBar = true;
@@ -83,8 +83,7 @@ public sealed partial class MainWindow : Window
         ConfigureWindow();
         StartupRevealStoryboard.Completed += (_, _) =>
         {
-            StartupOverlay.Visibility = Visibility.Collapsed;
-            StartupOverlay.IsHitTestVisible = false;
+            CompleteStartupReveal();
         };
         Closed += MainWindow_Closed;
     }
@@ -111,39 +110,6 @@ public sealed partial class MainWindow : Window
 
     private GameProfile? SelectedGame => GamesList.SelectedItem as GameProfile;
 
-    private void RootPage_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        ApplyResponsiveLayout();
-    }
-
-    private void ApplyResponsiveLayout()
-    {
-        if (_appWindow is null || TitleBarProductDescription is null)
-        {
-            return;
-        }
-
-        var displayScale = RootPage.XamlRoot?.RasterizationScale
-            ?? GetDpiForWindow(_windowHandle) / StandardDpi;
-        var effectiveWidth = _appWindow.ClientSize.Width / displayScale;
-        var compact = effectiveWidth < 1200;
-        if (_isCompactLayout == compact)
-        {
-            return;
-        }
-
-        _isCompactLayout = compact;
-        TitleBarProductDescription.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        IntroText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        HeaderPanel.Margin = compact ? new Thickness(16, 8, 16, 12) : new Thickness(24, 8, 24, 14);
-        WorkspacePanel.Margin = compact ? new Thickness(16, 0, 16, 12) : new Thickness(24, 0, 24, 18);
-        WorkspacePanel.ColumnSpacing = compact ? 12 : 16;
-        LibraryColumn.Width = new GridLength(compact ? 320 : 360);
-        DetailsPanel.Padding = compact ? new Thickness(20) : new Thickness(28);
-        SelectedGameNameText.FontSize = compact ? 26 : 30;
-        ProxyColumn.Width = new GridLength(compact ? 180 : 220);
-    }
-
     private void GameSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) =>
         UpdateLibraryState();
 
@@ -168,16 +134,29 @@ public sealed partial class MainWindow : Window
         UpdateLibraryState();
     }
 
-    private void ThemeButton_Click(object sender, RoutedEventArgs e)
+    private void ThemeSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
-        if (sender is not ToggleButton { Tag: string themeName }
+        if (sender.SelectedItem?.Tag is not string themeName
             || !Enum.TryParse(themeName, out ElementTheme theme))
         {
             return;
         }
 
-        ApplyTheme(theme);
-        SaveThemePreference(theme);
+        if (RootGrid.RequestedTheme != theme)
+        {
+            ApplyTheme(theme);
+            SaveThemePreference(theme);
+        }
+    }
+
+    private async void Upstream_Click(object sender, RoutedEventArgs e)
+    {
+        var opened = await Windows.System.Launcher.LaunchUriAsync(
+            new Uri("https://github.com/optiscaler/OptiScaler"));
+        if (!opened)
+        {
+            StatusText.Text = "Could not open the OptiScaler website";
+        }
     }
 
     private void LoadThemePreference()
@@ -205,10 +184,13 @@ public sealed partial class MainWindow : Window
 
     private void ApplyTheme(ElementTheme theme)
     {
-        LightThemeButton.IsChecked = theme == ElementTheme.Light;
-        DarkThemeButton.IsChecked = theme == ElementTheme.Dark;
-        SystemThemeButton.IsChecked = theme == ElementTheme.Default;
         RootGrid.RequestedTheme = theme;
+        ThemeSelector.SelectedItem = theme switch
+        {
+            ElementTheme.Light => LightThemeItem,
+            ElementTheme.Dark => DarkThemeItem,
+            _ => SystemThemeItem
+        };
         UpdateTitleBarColors();
     }
 
@@ -265,6 +247,8 @@ public sealed partial class MainWindow : Window
         }
 
         _hasInitialized = true;
+        RootGrid.XamlRoot.Changed += XamlRoot_Changed;
+        UpdateWindowScale(RootGrid.XamlRoot.RasterizationScale);
         _startupStartedAt = Stopwatch.GetTimestamp();
         _ = ShowStartupIndicatorAfterDelayAsync();
         Exception? loadException = null;
@@ -374,17 +358,26 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        CompleteStartupReveal();
+    }
+
+    private void CompleteStartupReveal()
+    {
+        // Commit the final values before stopping the storyboards so they no longer
+        // retain composition state for the large app surfaces after startup.
+        StartupOverlay.Opacity = 0;
         HeaderPanel.Opacity = 1;
         WorkspacePanel.Opacity = 1;
         FooterPanel.Opacity = 1;
+        StartupRevealStoryboard.Stop();
+        StartupIndicatorStoryboard.Stop();
         StartupOverlay.Visibility = Visibility.Collapsed;
         StartupOverlay.IsHitTestVisible = false;
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
     {
-        var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
-        var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(windowId)
+        var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(AppWindow.Id)
         {
             Title = "Add a game executable",
             CommitButtonText = "Add game",
@@ -435,8 +428,7 @@ public sealed partial class MainWindow : Window
 
     private async void ScanFolder_Click(object sender, RoutedEventArgs e)
     {
-        var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
-        var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(windowId)
+        var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(AppWindow.Id)
         {
             Title = "Choose a game folder",
             CommitButtonText = "Scan folder",
@@ -525,7 +517,7 @@ public sealed partial class MainWindow : Window
             game.ActiveInstallId = manifest.Id;
             game.InstalledVersion = manifest.OptiScalerVersion;
             await _profileStore.SaveAsync(Games);
-            ReleaseVersionText.Text = $"OptiScaler {payload.Version}";
+            UpstreamButton.Label = $"OptiScaler {payload.Version}";
             StatusText.Text = $"XeSS enabled for {game.Name}";
         }, showProgress: true, keepCompletionStatus: true);
     }
@@ -630,11 +622,11 @@ public sealed partial class MainWindow : Window
         try
         {
             var release = await _releaseClient.GetLatestReleaseAsync();
-            ReleaseVersionText.Text = $"OptiScaler {release.Version}";
+            UpstreamButton.Label = $"OptiScaler {release.Version}";
         }
         catch
         {
-            ReleaseVersionText.Text = "Offline";
+            UpstreamButton.Label = "Offline";
         }
     }
 
@@ -914,9 +906,9 @@ public sealed partial class MainWindow : Window
     private void ConfigureWindow()
     {
         _windowHandle = WindowNative.GetWindowHandle(this);
-        ApplyNativeWindowBackground();
-        var windowId = Win32Interop.GetWindowIdFromWindow(_windowHandle);
-        _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow = AppWindow;
+        _windowScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        var windowId = _appWindow.Id;
 
         var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Nearest);
         if (displayArea is not null)
@@ -925,7 +917,6 @@ public sealed partial class MainWindow : Window
             ApplyWindowSizeConstraints(displayArea);
         }
 
-        ApplyResponsiveLayout();
         RememberRestoredWindowSize(_appWindow);
         _shouldRestoreMaximized = _settings.WindowMaximized;
         if (_shouldRestoreMaximized && _appWindow.Presenter is OverlappedPresenter presenter)
@@ -936,7 +927,6 @@ public sealed partial class MainWindow : Window
         _isWindowPlacementReady = true;
 
         _appWindow.Changed += AppWindow_Changed;
-        _appWindow.Closing += AppWindow_Closing;
 
         if (AppWindowTitleBar.IsCustomizationSupported())
         {
@@ -946,35 +936,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ApplyNativeWindowBackground()
-    {
-        var color = Application.Current.Resources["ClawPageBrush"] is SolidColorBrush brush
-            ? brush.Color
-            : ColorHelper.FromArgb(255, 13, 17, 23);
-        var colorReference = (uint)(color.R | (color.G << 8) | (color.B << 16));
-        _nativeBackgroundBrush = CreateSolidBrush(colorReference);
-        if (_nativeBackgroundBrush != 0)
-        {
-            _previousNativeBackgroundBrush = SetClassLongPtr(
-                _windowHandle,
-                GclpBackgroundBrush,
-                _nativeBackgroundBrush);
-        }
-    }
-
-    private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
-    {
-        if (_nativeBackgroundBrush == 0)
-        {
-            return;
-        }
-
-        SetClassLongPtr(_windowHandle, GclpBackgroundBrush, _previousNativeBackgroundBrush);
-        DeleteObject(_nativeBackgroundBrush);
-        _nativeBackgroundBrush = 0;
-        _previousNativeBackgroundBrush = 0;
-    }
-
     private void PlaceWindowOnDisplay(DisplayArea displayArea)
     {
         if (_appWindow is null)
@@ -982,7 +943,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        var displayScale = _windowScale;
         var margin = (int)Math.Round(WorkAreaMargin * displayScale);
         var workArea = displayArea.WorkArea;
         var availableWidth = Math.Max(1, workArea.Width - (margin * 2));
@@ -1012,13 +973,13 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        var workArea = displayArea.WorkArea;
         presenter.PreferredMinimumWidth = Math.Min(
-            (int)Math.Round(MinimumWindowWidth * displayScale),
-            displayArea.WorkArea.Width);
+            (int)Math.Round(MinimumWindowWidth * _windowScale),
+            workArea.Width);
         presenter.PreferredMinimumHeight = Math.Min(
-            (int)Math.Round(MinimumWindowHeight * displayScale),
-            displayArea.WorkArea.Height);
+            (int)Math.Round(MinimumWindowHeight * _windowScale),
+            workArea.Height);
     }
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
@@ -1030,13 +991,24 @@ public sealed partial class MainWindow : Window
             RememberRestoredWindowSize(sender);
         }
 
-        if (args.DidPositionChange)
+    }
+
+    private void XamlRoot_Changed(XamlRoot sender, XamlRootChangedEventArgs args) =>
+        UpdateWindowScale(sender.RasterizationScale);
+
+    private void UpdateWindowScale(double scale)
+    {
+        if (_appWindow is null || !double.IsFinite(scale) || scale <= 0
+            || Math.Abs(scale - _windowScale) < 0.001)
         {
-            var displayArea = DisplayArea.GetFromWindowId(sender.Id, DisplayAreaFallback.Nearest);
-            if (displayArea is not null)
-            {
-                ApplyWindowSizeConstraints(displayArea);
-            }
+            return;
+        }
+
+        _windowScale = scale;
+        var displayArea = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Nearest);
+        if (displayArea is not null)
+        {
+            ApplyWindowSizeConstraints(displayArea);
         }
     }
 
@@ -1064,9 +1036,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
-        _lastRestoredWindowWidth = appWindow.Size.Width / displayScale;
-        _lastRestoredWindowHeight = appWindow.Size.Height / displayScale;
+        _lastRestoredWindowWidth = appWindow.Size.Width / _windowScale;
+        _lastRestoredWindowHeight = appWindow.Size.Height / _windowScale;
     }
 
     private static double GetPreferredWindowDimension(double? savedValue, double fallback, double minimum)
@@ -1081,18 +1052,6 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
-
-    private const int GclpBackgroundBrush = -10;
-
-    [DllImport("user32.dll", EntryPoint = "SetClassLongPtrW")]
-    private static extern nint SetClassLongPtr(nint windowHandle, int index, nint newValue);
-
-    [DllImport("gdi32.dll")]
-    private static extern nint CreateSolidBrush(uint colorReference);
-
-    [DllImport("gdi32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DeleteObject(nint graphicsObject);
 
     private void UpdateTitleBarColors()
     {
