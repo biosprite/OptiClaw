@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -7,9 +8,11 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using OptiClaw.Core.Models;
 using OptiClaw.Core.Services;
 using Windows.Graphics;
+using Windows.UI.ViewManagement;
 using WinRT.Interop;
 
 namespace OptiClaw;
@@ -32,6 +35,14 @@ public sealed class FrameGenerationOption
 
 public sealed partial class MainWindow : Window
 {
+    private const int PreferredWindowWidth = 1340;
+    private const int PreferredWindowHeight = 960;
+    private const int MinimumWindowWidth = 1008;
+    private const int MinimumWindowHeight = 640;
+    private const int WorkAreaMargin = 16;
+    private const int MinimumStartupSurfaceDurationMs = 100;
+    private const double StandardDpi = 96;
+
     private readonly AppDataPaths _paths = new();
     private readonly GameDetector _detector = new();
     private readonly ProfileStore _profileStore;
@@ -44,6 +55,17 @@ public sealed partial class MainWindow : Window
     private AppSettings _settings = new();
     private Guid? _loadedFrameGenerationInstallId;
     private AppWindow? _appWindow;
+    private nint _windowHandle;
+    private bool _hasInitialized;
+    private bool _startupReady;
+    private bool? _isCompactLayout;
+    private double? _lastRestoredWindowWidth;
+    private double? _lastRestoredWindowHeight;
+    private bool _isWindowPlacementReady;
+    private bool _shouldRestoreMaximized;
+    private long _startupStartedAt;
+    private nint _nativeBackgroundBrush;
+    private nint _previousNativeBackgroundBrush;
 
     public MainWindow()
     {
@@ -59,7 +81,12 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureWindow();
-        Closed += (_, _) => _releaseClient.Dispose();
+        StartupRevealStoryboard.Completed += (_, _) =>
+        {
+            StartupOverlay.Visibility = Visibility.Collapsed;
+            StartupOverlay.IsHitTestVisible = false;
+        };
+        Closed += MainWindow_Closed;
     }
 
     public ObservableCollection<GameProfile> Games { get; } = [];
@@ -83,6 +110,39 @@ public sealed partial class MainWindow : Window
     ];
 
     private GameProfile? SelectedGame => GamesList.SelectedItem as GameProfile;
+
+    private void RootPage_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ApplyResponsiveLayout();
+    }
+
+    private void ApplyResponsiveLayout()
+    {
+        if (_appWindow is null || TitleBarProductDescription is null)
+        {
+            return;
+        }
+
+        var displayScale = RootPage.XamlRoot?.RasterizationScale
+            ?? GetDpiForWindow(_windowHandle) / StandardDpi;
+        var effectiveWidth = _appWindow.ClientSize.Width / displayScale;
+        var compact = effectiveWidth < 1200;
+        if (_isCompactLayout == compact)
+        {
+            return;
+        }
+
+        _isCompactLayout = compact;
+        TitleBarProductDescription.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        IntroText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        HeaderPanel.Margin = compact ? new Thickness(16, 8, 16, 12) : new Thickness(24, 8, 24, 14);
+        WorkspacePanel.Margin = compact ? new Thickness(16, 0, 16, 12) : new Thickness(24, 0, 24, 18);
+        WorkspacePanel.ColumnSpacing = compact ? 12 : 16;
+        LibraryColumn.Width = new GridLength(compact ? 320 : 360);
+        DetailsPanel.Padding = compact ? new Thickness(20) : new Thickness(28);
+        SelectedGameNameText.FontSize = compact ? 26 : 30;
+        ProxyColumn.Width = new GridLength(compact ? 180 : 220);
+    }
 
     private void GameSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) =>
         UpdateLibraryState();
@@ -169,19 +229,156 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        try
+        {
+            _settings.WindowMaximized = _shouldRestoreMaximized;
+            if (_lastRestoredWindowWidth is double width
+                && _lastRestoredWindowHeight is double height)
+            {
+                _settings.WindowWidth = Math.Round(width, 2);
+                _settings.WindowHeight = Math.Round(height, 2);
+            }
+
+            _settingsStore.Save(_settings);
+        }
+        catch (IOException exception)
+        {
+            Debug.WriteLine($"Could not save the window size: {exception}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Debug.WriteLine($"Could not save the window size: {exception}");
+        }
+        finally
+        {
+            _releaseClient.Dispose();
+        }
+    }
+
     private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
     {
-        await RunBusyAsync("Loading game library…", async () =>
+        if (_hasInitialized)
         {
-            foreach (var game in await _profileStore.LoadAsync())
+            return;
+        }
+
+        _hasInitialized = true;
+        _startupStartedAt = Stopwatch.GetTimestamp();
+        _ = ShowStartupIndicatorAfterDelayAsync();
+        Exception? loadException = null;
+        _isBusy = true;
+        StatusText.Text = "Loading game library…";
+
+        try
+        {
+            var savedGames = await _profileStore.LoadAsync();
+            foreach (var game in savedGames)
             {
                 Games.Add(game);
             }
-        });
-        UpdateLibraryState();
-        GamesList.SelectedIndex = VisibleGames.Count > 0 ? 0 : -1;
+        }
+        catch (Exception exception)
+        {
+            loadException = exception;
+        }
+        finally
+        {
+            _startupReady = true;
+            _isBusy = false;
+            StatusText.Text = loadException is null ? "Ready" : "Library could not be loaded";
+            UpdateLibraryState();
+            await StabilizeStartupSurfaceAsync();
+            RevealApplication();
+        }
+
+        if (loadException is not null)
+        {
+            await ShowMessageAsync("OptiClaw couldn't load your library", GetFriendlyError(loadException));
+        }
 
         _ = CheckLatestReleaseAsync();
+    }
+
+    private async Task StabilizeStartupSurfaceAsync()
+    {
+        var elapsed = Stopwatch.GetElapsedTime(_startupStartedAt);
+        var remaining = TimeSpan.FromMilliseconds(MinimumStartupSurfaceDurationMs) - elapsed;
+        if (remaining > TimeSpan.Zero)
+        {
+            await Task.Delay(remaining);
+        }
+
+        await WaitForNextCompositionFrameAsync();
+    }
+
+    private static async Task WaitForNextCompositionFrameAsync()
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler<object>? handler = null;
+        handler = (_, _) =>
+        {
+            CompositionTarget.Rendering -= handler;
+            completion.TrySetResult(true);
+        };
+
+        CompositionTarget.Rendering += handler;
+        await Task.WhenAny(completion.Task, Task.Delay(100));
+        CompositionTarget.Rendering -= handler;
+    }
+
+    private async Task ShowStartupIndicatorAfterDelayAsync()
+    {
+        await Task.Delay(250);
+        if (_startupReady || StartupOverlay.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        var animationsEnabled = true;
+        try
+        {
+            animationsEnabled = new UISettings().AnimationsEnabled;
+        }
+        catch
+        {
+            // Fall back to the short fade if Windows cannot provide the preference.
+        }
+
+        if (animationsEnabled)
+        {
+            StartupIndicatorStoryboard.Begin();
+        }
+        else
+        {
+            StartupIndicator.Opacity = 1;
+        }
+    }
+
+    private void RevealApplication()
+    {
+        var animationsEnabled = true;
+        try
+        {
+            animationsEnabled = new UISettings().AnimationsEnabled;
+        }
+        catch
+        {
+            // Fall back to the short reveal if Windows cannot provide the preference.
+        }
+
+        if (animationsEnabled)
+        {
+            StartupRevealStoryboard.Begin();
+            return;
+        }
+
+        HeaderPanel.Opacity = 1;
+        WorkspacePanel.Opacity = 1;
+        FooterPanel.Opacity = 1;
+        StartupOverlay.Visibility = Visibility.Collapsed;
+        StartupOverlay.IsHitTestVisible = false;
     }
 
     private async void AddGame_Click(object sender, RoutedEventArgs e)
@@ -530,7 +727,7 @@ public sealed partial class MainWindow : Window
         DeploymentPathText.Text = game.DeploymentDirectory;
         InstallStateText.Text = game.IsInstalled ? "INSTALLED" : "READY";
         InstallStateText.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
-            game.IsInstalled ? "ClawXeSSBlueBrush" : "ClawOrangeBrush"];
+            game.IsInstalled ? "ClawXeSSBlueBrush" : "ClawGreenBrush"];
         InstallStateBadge.Background = game.IsInstalled
             ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawXeSSBlueBadgeBrush"]
             : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ClawReadyBadgeBrush"];
@@ -716,9 +913,31 @@ public sealed partial class MainWindow : Window
 
     private void ConfigureWindow()
     {
-        var windowId = Win32Interop.GetWindowIdFromWindow(WindowNative.GetWindowHandle(this));
+        _windowHandle = WindowNative.GetWindowHandle(this);
+        ApplyNativeWindowBackground();
+        var windowId = Win32Interop.GetWindowIdFromWindow(_windowHandle);
         _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.Resize(new SizeInt32(1180, 760));
+
+        var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Nearest);
+        if (displayArea is not null)
+        {
+            PlaceWindowOnDisplay(displayArea);
+            ApplyWindowSizeConstraints(displayArea);
+        }
+
+        ApplyResponsiveLayout();
+        RememberRestoredWindowSize(_appWindow);
+        _shouldRestoreMaximized = _settings.WindowMaximized;
+        if (_shouldRestoreMaximized && _appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
+
+        _isWindowPlacementReady = true;
+
+        _appWindow.Changed += AppWindow_Changed;
+        _appWindow.Closing += AppWindow_Closing;
+
         if (AppWindowTitleBar.IsCustomizationSupported())
         {
             _appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
@@ -726,6 +945,154 @@ public sealed partial class MainWindow : Window
             UpdateTitleBarColors();
         }
     }
+
+    private void ApplyNativeWindowBackground()
+    {
+        var color = Application.Current.Resources["ClawPageBrush"] is SolidColorBrush brush
+            ? brush.Color
+            : ColorHelper.FromArgb(255, 13, 17, 23);
+        var colorReference = (uint)(color.R | (color.G << 8) | (color.B << 16));
+        _nativeBackgroundBrush = CreateSolidBrush(colorReference);
+        if (_nativeBackgroundBrush != 0)
+        {
+            _previousNativeBackgroundBrush = SetClassLongPtr(
+                _windowHandle,
+                GclpBackgroundBrush,
+                _nativeBackgroundBrush);
+        }
+    }
+
+    private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_nativeBackgroundBrush == 0)
+        {
+            return;
+        }
+
+        SetClassLongPtr(_windowHandle, GclpBackgroundBrush, _previousNativeBackgroundBrush);
+        DeleteObject(_nativeBackgroundBrush);
+        _nativeBackgroundBrush = 0;
+        _previousNativeBackgroundBrush = 0;
+    }
+
+    private void PlaceWindowOnDisplay(DisplayArea displayArea)
+    {
+        if (_appWindow is null)
+        {
+            return;
+        }
+
+        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        var margin = (int)Math.Round(WorkAreaMargin * displayScale);
+        var workArea = displayArea.WorkArea;
+        var availableWidth = Math.Max(1, workArea.Width - (margin * 2));
+        var availableHeight = Math.Max(1, workArea.Height - (margin * 2));
+        var preferredWidth = GetPreferredWindowDimension(
+            _settings.WindowWidth,
+            PreferredWindowWidth,
+            MinimumWindowWidth);
+        var preferredHeight = GetPreferredWindowDimension(
+            _settings.WindowHeight,
+            PreferredWindowHeight,
+            MinimumWindowHeight);
+        var width = Math.Min((int)Math.Round(preferredWidth * displayScale), availableWidth);
+        var height = Math.Min((int)Math.Round(preferredHeight * displayScale), availableHeight);
+        var bounds = new RectInt32(
+            workArea.X + ((workArea.Width - width) / 2),
+            workArea.Y + ((workArea.Height - height) / 2),
+            width,
+            height);
+        _appWindow.MoveAndResize(bounds, displayArea);
+    }
+
+    private void ApplyWindowSizeConstraints(DisplayArea displayArea)
+    {
+        if (_appWindow?.Presenter is not OverlappedPresenter presenter)
+        {
+            return;
+        }
+
+        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        presenter.PreferredMinimumWidth = Math.Min(
+            (int)Math.Round(MinimumWindowWidth * displayScale),
+            displayArea.WorkArea.Width);
+        presenter.PreferredMinimumHeight = Math.Min(
+            (int)Math.Round(MinimumWindowHeight * displayScale),
+            displayArea.WorkArea.Height);
+    }
+
+    private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        RememberWindowPresentationState(sender);
+
+        if (args.DidSizeChange && _isWindowPlacementReady)
+        {
+            RememberRestoredWindowSize(sender);
+        }
+
+        if (args.DidPositionChange)
+        {
+            var displayArea = DisplayArea.GetFromWindowId(sender.Id, DisplayAreaFallback.Nearest);
+            if (displayArea is not null)
+            {
+                ApplyWindowSizeConstraints(displayArea);
+            }
+        }
+    }
+
+    private void RememberWindowPresentationState(AppWindow appWindow)
+    {
+        if (appWindow.Presenter is not OverlappedPresenter presenter)
+        {
+            return;
+        }
+
+        if (presenter.State == OverlappedPresenterState.Maximized)
+        {
+            _shouldRestoreMaximized = true;
+        }
+        else if (presenter.State == OverlappedPresenterState.Restored)
+        {
+            _shouldRestoreMaximized = false;
+        }
+    }
+
+    private void RememberRestoredWindowSize(AppWindow appWindow)
+    {
+        if (appWindow.Presenter is not OverlappedPresenter { State: OverlappedPresenterState.Restored })
+        {
+            return;
+        }
+
+        var displayScale = GetDpiForWindow(_windowHandle) / StandardDpi;
+        _lastRestoredWindowWidth = appWindow.Size.Width / displayScale;
+        _lastRestoredWindowHeight = appWindow.Size.Height / displayScale;
+    }
+
+    private static double GetPreferredWindowDimension(double? savedValue, double fallback, double minimum)
+    {
+        if (savedValue is not double value || !double.IsFinite(value) || value <= 0)
+        {
+            return fallback;
+        }
+
+        return Math.Max(value, minimum);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(nint windowHandle);
+
+    private const int GclpBackgroundBrush = -10;
+
+    [DllImport("user32.dll", EntryPoint = "SetClassLongPtrW")]
+    private static extern nint SetClassLongPtr(nint windowHandle, int index, nint newValue);
+
+    [DllImport("gdi32.dll")]
+    private static extern nint CreateSolidBrush(uint colorReference);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(nint graphicsObject);
 
     private void UpdateTitleBarColors()
     {
