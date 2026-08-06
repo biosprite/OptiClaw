@@ -135,6 +135,7 @@ public sealed class OptiScalerInstaller(AppDataPaths paths)
         RemoveEmptyCreatedDirectories(manifest);
         manifest.RestoredAt = DateTimeOffset.UtcNow;
         await SaveManifestAsync(manifest, cancellationToken).ConfigureAwait(false);
+        DeleteRestoredPayload(installDataDirectory);
         return RestoreResult.Success;
     }
 
@@ -311,6 +312,25 @@ public sealed class OptiScalerInstaller(AppDataPaths paths)
                 && !Directory.EnumerateFileSystemEntries(directory).Any())
             {
                 Directory.Delete(directory);
+            }
+        }
+    }
+
+    private static void DeleteRestoredPayload(string installDirectory)
+    {
+        foreach (var directoryName in new[] { "Originals", "Generated" })
+        {
+            var directory = Path.Combine(installDirectory, directoryName);
+            try
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // The restore succeeded; a future startup can retry stale backup cleanup.
             }
         }
     }

@@ -131,6 +131,15 @@
                     <FontIcon Glyph="&#xE721;" />
                 </AppBarButton.Icon>
             </AppBarButton>
+            <AppBarButton
+                Label="App data"
+                Click="AppDataFolder_Click"
+                ToolTipService.ToolTip="Open the OptiClaw data folder to manage or delete stored data"
+                AutomationProperties.Name="Open the OptiClaw app data folder">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE8B7;" />
+                </AppBarButton.Icon>
+            </AppBarButton>
             <AppBarSeparator />
             <AppBarButton
                 x:Name="UpstreamButton"

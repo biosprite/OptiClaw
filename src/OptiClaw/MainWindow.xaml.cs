@@ -160,6 +160,23 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void AppDataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(_paths.Root);
+            Process.Start(new ProcessStartInfo(_paths.Root) { UseShellExecute = true });
+            StatusText.Text = "Opened the OptiClaw data folder";
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception)
+        {
+            StatusText.Text = "Could not open the OptiClaw data folder";
+            await ShowMessageAsync("Folder couldn't be opened", GetFriendlyError(exception));
+        }
+    }
+
     private void LoadThemePreference()
     {
         var theme = ElementTheme.Default;
@@ -511,10 +528,11 @@ public sealed partial class MainWindow : Window
         WorkProgress.IsIndeterminate = false;
         WorkProgress.Value = 0;
         var progress = new Progress<double>(value => WorkProgress.Value = value);
-        await RunBusyAsync("Downloading and verifying official OptiScaler release…", async () =>
+        var status = new Progress<string>(value => StatusText.Text = value);
+        await RunBusyAsync("Checking latest OptiScaler release…", async () =>
         {
-            var payload = await _releaseClient.PrepareLatestAsync(progress);
-            StatusText.Text = $"Installing OptiScaler {payload.Version}…";
+            using var payload = await _releaseClient.PrepareLatestAsync(progress, status);
+            StatusText.Text = $"Applying OptiScaler {payload.Version} to {game.Name}…";
             var manifest = await _installer.InstallAsync(game, payload, proxyDllName);
             game.ActiveInstallId = manifest.Id;
             game.InstalledVersion = manifest.OptiScalerVersion;

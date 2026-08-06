@@ -55,21 +55,18 @@ public sealed class OptiScalerReleaseClient : IDisposable
 
     public async Task<PreparedPayload> PrepareLatestAsync(
         IProgress<double>? progress = null,
+        IProgress<string>? status = null,
         CancellationToken cancellationToken = default)
     {
         var release = await GetLatestReleaseAsync(cancellationToken).ConfigureAwait(false);
         var versionDirectory = Path.Combine(_paths.CacheDirectory, release.Version);
-        var payloadDirectory = Path.Combine(versionDirectory, "payload");
-        var markerPath = Path.Combine(payloadDirectory, ".ready");
-        if (File.Exists(markerPath) && File.Exists(Path.Combine(payloadDirectory, "OptiScaler.dll")))
-        {
-            progress?.Report(1);
-            return new PreparedPayload(release.Version, payloadDirectory);
-        }
-
         Directory.CreateDirectory(versionDirectory);
         var archivePath = Path.Combine(versionDirectory, release.AssetName);
-        await DownloadAndVerifyAsync(release, archivePath, progress, cancellationToken).ConfigureAwait(false);
+        await DownloadAndVerifyAsync(release, archivePath, progress, status, cancellationToken).ConfigureAwait(false);
+
+        status?.Report($"Applying OptiScaler {release.Version}…");
+        DeleteDirectoryIfPossible(Path.Combine(versionDirectory, "payload"));
+        DeleteStaleExtractions(versionDirectory);
 
         var extractionDirectory = Path.Combine(versionDirectory, $"extract-{Guid.NewGuid():N}");
         Directory.CreateDirectory(extractionDirectory);
@@ -83,28 +80,17 @@ public sealed class OptiScalerReleaseClient : IDisposable
                 throw new InvalidDataException("The downloaded archive is missing required OptiScaler/XeSS files.");
             }
 
-            await File.WriteAllTextAsync(
-                Path.Combine(extractionDirectory, ".ready"),
-                $"OptiScaler {release.Version}",
-                cancellationToken).ConfigureAwait(false);
-
-            if (Directory.Exists(payloadDirectory))
+            progress?.Report(1);
+            return new PreparedPayload(release.Version, extractionDirectory)
             {
-                Directory.Delete(payloadDirectory, true);
-            }
-
-            Directory.Move(extractionDirectory, payloadDirectory);
+                DeleteDirectoryOnDispose = true
+            };
         }
-        finally
+        catch
         {
-            if (Directory.Exists(extractionDirectory))
-            {
-                Directory.Delete(extractionDirectory, true);
-            }
+            DeleteDirectoryIfPossible(extractionDirectory);
+            throw;
         }
-
-        progress?.Report(1);
-        return new PreparedPayload(release.Version, payloadDirectory);
     }
 
     public void Dispose()
@@ -119,6 +105,7 @@ public sealed class OptiScalerReleaseClient : IDisposable
         OptiScalerRelease release,
         string archivePath,
         IProgress<double>? progress,
+        IProgress<string>? status,
         CancellationToken cancellationToken)
     {
         if (File.Exists(archivePath)
@@ -134,6 +121,7 @@ public sealed class OptiScalerReleaseClient : IDisposable
         var temporaryPath = archivePath + ".download";
         try
         {
+            status?.Report($"Downloading and verifying OptiScaler {release.Version}…");
             using var response = await _httpClient.GetAsync(
                 release.DownloadUri,
                 HttpCompletionOption.ResponseHeadersRead,
@@ -207,6 +195,36 @@ public sealed class OptiScalerReleaseClient : IDisposable
                 Overwrite = true,
                 PreserveFileTime = true
             });
+        }
+    }
+
+    private static void DeleteStaleExtractions(string versionDirectory)
+    {
+        try
+        {
+            foreach (var directory in Directory.GetDirectories(versionDirectory, "extract-*"))
+            {
+                DeleteDirectoryIfPossible(directory);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Cache cleanup is best effort and must not block an installation.
+        }
+    }
+
+    private static void DeleteDirectoryIfPossible(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, true);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Cache cleanup is best effort and can be retried next time.
         }
     }
 
