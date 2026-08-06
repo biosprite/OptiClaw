@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
     private Guid? _loadedFrameGenerationInstallId;
     private AppWindow? _appWindow;
     private nint _windowHandle;
+    private nint _appIconHandle;
     private bool _hasInitialized;
     private bool _startupReady;
     private double? _lastRestoredWindowWidth;
@@ -235,6 +236,7 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            ReleaseWindowIcon();
             _releaseClient.Dispose();
         }
     }
@@ -907,6 +909,7 @@ public sealed partial class MainWindow : Window
     {
         _windowHandle = WindowNative.GetWindowHandle(this);
         _appWindow = AppWindow;
+        ConfigureWindowIcon();
         _windowScale = GetDpiForWindow(_windowHandle) / StandardDpi;
         var windowId = _appWindow.Id;
 
@@ -934,6 +937,69 @@ public sealed partial class MainWindow : Window
             _appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             UpdateTitleBarColors();
         }
+    }
+
+    private void ConfigureWindowIcon()
+    {
+        var executablePath = Environment.ProcessPath;
+        if (_appWindow is null || string.IsNullOrEmpty(executablePath))
+        {
+            return;
+        }
+
+        nint largeIcon = 0;
+        nint smallIcon = 0;
+        try
+        {
+            if (ExtractIconEx(executablePath, 0, out largeIcon, out smallIcon, 1) == 0)
+            {
+                return;
+            }
+
+            var selectedIcon = largeIcon != 0 ? largeIcon : smallIcon;
+            if (selectedIcon == 0)
+            {
+                return;
+            }
+
+            _appWindow.SetIcon(Win32Interop.GetIconIdFromIcon(selectedIcon));
+            _appIconHandle = selectedIcon;
+            if (selectedIcon == largeIcon)
+            {
+                largeIcon = 0;
+            }
+            else
+            {
+                smallIcon = 0;
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Could not set the window icon: {exception}");
+        }
+        finally
+        {
+            if (largeIcon != 0)
+            {
+                DestroyIcon(largeIcon);
+            }
+
+            if (smallIcon != 0)
+            {
+                DestroyIcon(smallIcon);
+            }
+        }
+    }
+
+    private void ReleaseWindowIcon()
+    {
+        if (_appIconHandle == 0)
+        {
+            return;
+        }
+
+        DestroyIcon(_appIconHandle);
+        _appIconHandle = 0;
     }
 
     private void PlaceWindowOnDisplay(DisplayArea displayArea)
@@ -1052,6 +1118,18 @@ public sealed partial class MainWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint ExtractIconEx(
+        string fileName,
+        int iconIndex,
+        out nint largeIcon,
+        out nint smallIcon,
+        uint iconCount);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DestroyIcon(nint iconHandle);
 
     private void UpdateTitleBarColors()
     {
