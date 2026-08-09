@@ -95,27 +95,6 @@ public sealed class OptiScalerInstaller(AppDataPaths paths)
             return RestoreResult.Success;
         }
 
-        var conflicts = new List<string>();
-        foreach (var change in manifest.Files)
-        {
-            var destination = GetSafeDestination(manifest.DeploymentDirectory, change.RelativePath);
-            if (!File.Exists(destination))
-            {
-                continue;
-            }
-
-            var currentHash = await FileSystemHelpers.ComputeSha256Async(destination, cancellationToken).ConfigureAwait(false);
-            if (!string.Equals(currentHash, change.InstalledSha256, StringComparison.OrdinalIgnoreCase))
-            {
-                conflicts.Add(change.RelativePath);
-            }
-        }
-
-        if (conflicts.Count > 0)
-        {
-            return new RestoreResult(false, conflicts);
-        }
-
         var installDataDirectory = paths.GetInstallDirectory(gameId, installId);
         foreach (var change in manifest.Files.AsEnumerable().Reverse())
         {

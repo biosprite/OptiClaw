@@ -52,7 +52,7 @@ public sealed class OptiScalerInstallerTests
     }
 
     [Fact]
-    public async Task Restore_RefusesToOverwriteAFileChangedAfterInstall()
+    public async Task Restore_RemovesAFileChangedAfterInstall()
     {
         using var temporary = new TemporaryDirectory();
         var gameDirectory = temporary.CreateDirectory("Game");
@@ -76,9 +76,43 @@ public sealed class OptiScalerInstallerTests
 
         var result = await installer.RestoreAsync(game.Id, manifest.Id);
 
-        Assert.False(result.Succeeded);
-        Assert.Contains("dxgi.dll", result.Conflicts);
-        Assert.Equal([99], await File.ReadAllBytesAsync(Path.Combine(gameDirectory, "dxgi.dll")));
+        Assert.True(result.Succeeded);
+        Assert.False(File.Exists(Path.Combine(gameDirectory, "dxgi.dll")));
+    }
+
+    [Fact]
+    public async Task Restore_AllowsOptiScalerConfigurationChangedAfterInstall()
+    {
+        using var temporary = new TemporaryDirectory();
+        var gameDirectory = temporary.CreateDirectory("Game");
+        var executable = temporary.WriteFile(@"Game\Game.exe");
+        var payloadDirectory = temporary.CreateDirectory("Payload");
+        temporary.WriteFile(@"Payload\OptiScaler.dll", [1]);
+        temporary.WriteFile(@"Payload\libxess.dll", [2]);
+        await File.WriteAllTextAsync(
+            Path.Combine(payloadDirectory, "OptiScaler.ini"),
+            "[Upscalers]\nDx12Upscaler=auto\n");
+        await File.WriteAllTextAsync(
+            Path.Combine(payloadDirectory, "FakeNvapi.ini"),
+            "[Settings]\nEnabled=true\n");
+        var game = new GameProfile
+        {
+            Name = "Game",
+            InstallDirectory = gameDirectory,
+            DeploymentDirectory = gameDirectory,
+            ExecutablePath = executable
+        };
+        var appData = new AppDataPaths(temporary.CreateDirectory("AppData"));
+        var installer = new OptiScalerInstaller(appData);
+        var manifest = await installer.InstallAsync(game, new PreparedPayload("test", payloadDirectory), "dxgi.dll");
+        await File.AppendAllTextAsync(Path.Combine(gameDirectory, "OptiScaler.ini"), "EnableOverlay=true\n");
+        await File.AppendAllTextAsync(Path.Combine(gameDirectory, "FakeNvapi.ini"), "ChangedByGame=true\n");
+
+        var result = await installer.RestoreAsync(game.Id, manifest.Id);
+
+        Assert.True(result.Succeeded);
+        Assert.False(File.Exists(Path.Combine(gameDirectory, "OptiScaler.ini")));
+        Assert.False(File.Exists(Path.Combine(gameDirectory, "FakeNvapi.ini")));
     }
 }
 
