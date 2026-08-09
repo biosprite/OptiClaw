@@ -13,7 +13,7 @@ OptiClaw is an unofficial [OptiScaler](https://github.com/optiscaler/OptiScaler)
 
 ## Usage
 
-1. Download the latest `OptiClaw.exe` or build it from source.
+1. Install OptiClaw from the Microsoft Store once its listing is available, or build the MSIX package from source.
 2. Add a game or scan a library.
 3. Select the game and choose **Install XeSS**.
 4. Launch the game normally. Press `Insert` to open the OptiScaler overlay.
@@ -33,13 +33,17 @@ dotnet test .\tests\OptiClaw.Core.Tests\OptiClaw.Core.Tests.csproj -c Release
 dotnet build .\src\OptiClaw\OptiClaw.csproj -c Release -p:Platform=x64
 ```
 
-Create a self-contained executable with:
+Create an unsigned Store upload package with:
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-The output is written to `artifacts\OptiClaw.exe`.
+The output is written to `artifacts\OptiClaw.msixupload`. The manifest contains the Partner Center identity assigned to the OptiClaw Store product.
+
+## Privacy
+
+See the [OptiClaw privacy policy](PRIVACY.md).
 
 ## License
 

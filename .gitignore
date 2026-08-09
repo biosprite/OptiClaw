@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
+**/AppPackages/
 .vs/
 .vscode/
 artifacts/
