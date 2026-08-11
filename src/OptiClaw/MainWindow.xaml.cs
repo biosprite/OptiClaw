@@ -50,6 +50,7 @@ public sealed partial class MainWindow : Window
     private readonly OptiScalerInstaller _installer;
     private readonly OptiScalerReleaseClient _releaseClient;
     private bool _isBusy;
+    private bool _isGuideOpen;
     private bool _sortAscending = true;
     private AppSettings _settings = new();
     private Guid? _loadedFrameGenerationInstallId;
@@ -94,8 +95,8 @@ public sealed partial class MainWindow : Window
     public IReadOnlyList<string> ProxyDllNames => OptiScalerInstaller.SupportedProxyDllNames;
     public IReadOnlyList<FrameGenerationOption> FrameGenerationInputOptions { get; } =
     [
-        new("DLSSG via Streamline — requires native in-game DLSS FG", "dlssg"),
-        new("FSR 3.1 FG — requires native in-game FSR FG", "fsrfg"),
+        new("DLSSG via Streamline (requires native in-game DLSS FG)", "dlssg"),
+        new("FSR 3.1 FG (requires native in-game FSR FG)", "fsrfg"),
         new("OptiFG (Upscaler fallback)", "upscaler")
     ];
     public IReadOnlyList<FrameGenerationOption> FrameGenerationOutputOptions { get; } =
@@ -157,6 +158,45 @@ public sealed partial class MainWindow : Window
         if (!opened)
         {
             StatusText.Text = "Could not open the OptiScaler website";
+        }
+    }
+
+    private void Guide_Click(object sender, RoutedEventArgs e)
+    {
+        _isGuideOpen = !_isGuideOpen;
+        WorkspacePanel.Visibility = _isGuideOpen ? Visibility.Collapsed : Visibility.Visible;
+        GuidePanel.Visibility = _isGuideOpen ? Visibility.Visible : Visibility.Collapsed;
+        if (_isGuideOpen)
+        {
+            GuideRevealStoryboard.Begin();
+        }
+        else
+        {
+            LibraryRevealStoryboard.Begin();
+        }
+
+        GuideButton.Label = _isGuideOpen ? "Back to library" : "Guide";
+        var accessibleLabel = _isGuideOpen
+            ? "Return to the game library"
+            : "Open the OptiScaler setup guide";
+        ToolTipService.SetToolTip(GuideButton, accessibleLabel);
+        AutomationProperties.SetName(GuideButton, accessibleLabel);
+    }
+
+    private async void GuideDocs_Click(object sender, RoutedEventArgs e) =>
+        await OpenGuideUriAsync("https://github.com/optiscaler/OptiScaler/wiki");
+
+    private async void GuideCompatibility_Click(object sender, RoutedEventArgs e) =>
+        await OpenGuideUriAsync("https://github.com/optiscaler/OptiScaler/wiki/Compatibility-List");
+
+    private async void GuideFrameGeneration_Click(object sender, RoutedEventArgs e) =>
+        await OpenGuideUriAsync("https://github.com/optiscaler/OptiScaler/wiki/Frame-Generation-Options");
+
+    private async Task OpenGuideUriAsync(string uri)
+    {
+        if (!await Windows.System.Launcher.LaunchUriAsync(new Uri(uri)))
+        {
+            StatusText.Text = "Could not open the OptiScaler documentation";
         }
     }
 

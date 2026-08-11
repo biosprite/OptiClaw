@@ -44,6 +44,20 @@
                     To="1"
                     Duration="0:0:0.12" />
             </Storyboard>
+            <Storyboard x:Name="GuideRevealStoryboard">
+                <DoubleAnimation Storyboard.TargetName="GuidePanel" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.16">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+            <Storyboard x:Name="LibraryRevealStoryboard">
+                <DoubleAnimation Storyboard.TargetName="WorkspacePanel" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.16">
+                    <DoubleAnimation.EasingFunction>
+                        <QuadraticEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
         </Grid.Resources>
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="WindowWidthStates">
@@ -56,6 +70,7 @@
                         <Setter Target="TitleBarText.Margin" Value="16,0,0,0" />
                         <Setter Target="HeaderPanel.Margin" Value="16,2,8,8" />
                         <Setter Target="WorkspacePanel.Margin" Value="16,0,16,12" />
+                        <Setter Target="GuidePanel.Margin" Value="16,0,16,12" />
                         <Setter Target="WorkspacePanel.ColumnSpacing" Value="12" />
                         <Setter Target="LibraryColumn.Width" Value="320" />
                         <Setter Target="DetailsPanel.Padding" Value="20" />
@@ -72,6 +87,7 @@
                         <Setter Target="TitleBarText.Margin" Value="24,0,0,0" />
                         <Setter Target="HeaderPanel.Margin" Value="24,2,16,10" />
                         <Setter Target="WorkspacePanel.Margin" Value="24,0,24,18" />
+                        <Setter Target="GuidePanel.Margin" Value="24,0,24,18" />
                         <Setter Target="WorkspacePanel.ColumnSpacing" Value="16" />
                         <Setter Target="LibraryColumn.Width" Value="360" />
                         <Setter Target="DetailsPanel.Padding" Value="28" />
@@ -141,6 +157,16 @@
                 </AppBarButton.Icon>
             </AppBarButton>
             <AppBarSeparator />
+            <AppBarButton
+                x:Name="GuideButton"
+                Label="Guide"
+                Click="Guide_Click"
+                ToolTipService.ToolTip="Open the OptiScaler setup guide"
+                AutomationProperties.Name="Open the OptiScaler setup guide">
+                <AppBarButton.Icon>
+                    <FontIcon Glyph="&#xE82D;" />
+                </AppBarButton.Icon>
+            </AppBarButton>
             <AppBarButton
                 x:Name="UpstreamButton"
                 Label="Checking…"
@@ -311,26 +337,43 @@
                                 <StackPanel>
                                     <TextBlock x:Name="SelectedGameNameText" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
                                     <TextBlock x:Name="SelectedGameSourceText" Margin="0,5,0,0" Foreground="{ThemeResource ClawMutedBrush}" />
-                                    <InfoBar
-                                        Margin="0,12,0,0"
-                                        IsOpen="True"
-                                        IsClosable="False"
-                                        Severity="Warning"
-                                        Title="Single-player games only"
-                                        Message="DLL injection may trigger anti-cheat systems." />
+                                    <Border Margin="0,12,0,0" Background="#4A3815" CornerRadius="4" Padding="14,8">
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xE7BA;" FontSize="15" Foreground="#FFD800" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="Single-player only" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="DLL injection may trigger anti-cheat systems and result in bans from online services." FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Margin="0,8,0,0" Background="{StaticResource ClawXeSSBlueBadgeBrush}" CornerRadius="4" Padding="14,8">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{StaticResource ClawXeSSBlueBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Detected" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="DetectedInputsText" Grid.Column="1" Text="None found" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                </Grid>
+                                                <TextBlock Text="Detected files may not be enabled in-game." FontSize="11" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                                 <Border Grid.Column="1" x:Name="InstallStateBadge" Background="{StaticResource ClawReadyBadgeBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Top">
                                     <TextBlock x:Name="InstallStateText" Text="READY" FontSize="11" CharacterSpacing="100" Foreground="{StaticResource ClawGreenBrush}" FontWeight="SemiBold" />
                                 </Border>
                             </Grid>
-
-                            <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="DETECTED COMPONENTS" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
-                                    <TextBlock x:Name="DetectedInputsText" Text="None found" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="Libraries found in the game folder. Their presence does not guarantee every related feature is enabled in-game." FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
 
                             <StackPanel Spacing="7">
                                 <TextBlock Text="GAME EXECUTABLE" FontSize="10" CharacterSpacing="120" Foreground="{ThemeResource ClawMutedBrush}" />
@@ -412,13 +455,15 @@
                                             Grid.Column="1"
                                             OffContent="Off"
                                             OnContent="On"
+                                            HorizontalAlignment="Right"
+                                            Margin="24,0,0,0"
                                             VerticalAlignment="Center" />
                                     </Grid>
 
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="160" />
                                             <ColumnDefinition Width="110" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
@@ -476,6 +521,256 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <Border
+            x:Name="GuidePanel"
+            Grid.Row="2"
+            Margin="24,0,24,18"
+            Background="{ThemeResource ClawCardBrush}"
+            BorderBrush="{ThemeResource ClawCardBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Visibility="Collapsed">
+            <ScrollViewer Padding="28" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel MaxWidth="1080" HorizontalAlignment="Center" Spacing="18">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="#4A3815" CornerRadius="4" Padding="14,8">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE7BA;" FontSize="15" Foreground="#FFD800" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="Single-player only" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="Test offline without anti-cheat. Change one setting at a time and restart after FG changes." FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                        <Button Grid.Column="1" Click="GuideDocs_Click" MinHeight="36" Padding="12,7" CornerRadius="8" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8A7;" FontSize="14" />
+                                <TextBlock Text="Official wiki" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Border Background="{StaticResource ClawXeSSBlueBadgeBrush}" CornerRadius="4" Padding="14,8">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE765;" FontSize="15" Foreground="{StaticResource ClawXeSSBlueBrush}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Default keys" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="Insert" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="opens the menu" FontSize="12" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Text="End" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="5" Text="toggles FG" FontSize="12" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="6" Text="On a handheld, map them to spare rear or back buttons." FontSize="12" Foreground="{ThemeResource ClawMutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="SETUP BASICS" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                            <TextBlock Text="1" Foreground="{StaticResource ClawXeSSBlueBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Pick the input" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="Use the highest-ranked compatible input below. Confirm the upscaler works before changing anything else." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                            <TextBlock Text="2" Foreground="{StaticResource ClawXeSSBlueBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Stabilize real FPS" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="Tune graphics before enabling FG. Aim for a steady 45–60 real FPS. Below 40, lower demanding settings first." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                            <TextBlock Text="3" Foreground="{StaticResource ClawXeSSBlueBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Add FG last" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="Use native FG when available. Select an FG Input and Output, save, restart, then check smoothness, controls and the HUD." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="UPSCALER INPUT PRIORITY" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                        <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                            <StackPanel Spacing="16">
+                            <Grid RowSpacing="12" ColumnSpacing="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="1.25*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="RANK / INPUT" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
+                                <TextBlock Grid.Column="1" Text="BEST USE CASE" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
+                                <TextBlock Grid.Column="2" Text="WATCH FOR" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource ClawMutedBrush}" />
+
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                    <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                        <TextBlock Text="1" FontSize="12" FontWeight="Bold" Foreground="{StaticResource ClawXeSSBlueBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="DLSS input" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="First choice for most swaps. It usually supplies the motion, depth and exposure data OptiScaler needs." FontSize="14" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="Some games hide DLSS on non-NVIDIA GPUs. Check the compatibility list for workarounds." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                                    <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                        <TextBlock Text="2" FontSize="12" FontWeight="Bold" Foreground="{StaticResource ClawXeSSBlueBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="FSR input" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="Second choice. Prefer FSR 3.1 because it uses a standardized API." FontSize="14" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="FSR 2 and FSR 3 implementations vary by game." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+                                    <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource ClawXeSSBlueBadgeBrush}">
+                                        <TextBlock Text="3" FontSize="12" FontWeight="Bold" Foreground="{StaticResource ClawXeSSBlueBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="XeSS input" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="Use when XeSS is the only input, or swap the game's XeSS path to OptiScaler XeSS for potentially better image quality." FontSize="14" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="3" Grid.Column="2" Text="Compare image quality per game. In Unreal Engine, use XeSS or FSR4 output because the XeSS plugin does not supply depth." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource ClawCardBorderBrush}" />
+                            <TextBlock Text="FRAME GENERATION INPUT PRIORITY" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                            <Grid ColumnSpacing="20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="1  DLSSG via Streamline" FontWeight="SemiBold" />
+                                    <TextBlock Text="Best for DX12 Streamline 2+ games with native DLSS FG. Enable FG in-game and in OptiScaler, then save and restart." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="2  Native FSR 3.1 / 3.0 FG" FontWeight="SemiBold" />
+                                    <TextBlock Text="Use the game's native FSR FG input. Enable FG in-game and in OptiScaler, then save and restart." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="6">
+                                    <TextBlock Text="3  OptiFG / Upscaler" FontWeight="SemiBold" />
+                                    <TextBlock Text="Experimental fallback for DX12 games without working native FG. Check the HUD for ghosting or duplicated frames." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="XEFG CHECKLIST" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                        <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                            <Grid ColumnSpacing="18" RowSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="✓  Use DX12 and Borderless Fullscreen" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="1" Text="✓  Use HDR10. XeFG does not support scRGB or FP16 HDR" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="2" Text="✓  Restart when the overlay tells you to" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="1" Text="✓  Confirm FPS rises and frame pacing stays flat" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="×  No Vulkan or Exclusive Fullscreen" Foreground="{StaticResource ClawOrangeBrush}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="×  No RTSS Reflex injection, Anti-Lag 1 or Enhanced Sync" Foreground="{StaticResource ClawOrangeBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="BASE FPS &amp; MULTIPLIER TIPS" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                        <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                            <Grid ColumnSpacing="18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="45–60" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource ClawGreenBrush}" />
+                                    <TextBlock Text="real FPS target" FontSize="13" Foreground="{ThemeResource ClawMutedBrush}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="Start at 2× for the fewest artifacts. Try 3× only with stable base FPS and a high-refresh display. Use 4× cautiously." FontSize="14" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="2" Text="FG smooths motion but does not improve input response. Below 40 real FPS, lower graphics settings or leave FG off." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="VERIFY BEFORE YOU KEEP IT" FontSize="10" CharacterSpacing="140" Foreground="{ThemeResource ClawMutedBrush}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                                <TextBlock Text="Pan the camera and inspect character edges, foliage and transparent effects. Watch the HUD for ghosting or duplication." FontSize="14" TextWrapping="Wrap" />
+                            </Border>
+                            <Border Grid.Column="1" Background="{ThemeResource ClawInsetBrush}" CornerRadius="10" Padding="18">
+                                <TextBlock Text="Compare the same scene with FG off and on. Keep FG only if motion is smoother and controls still feel responsive." FontSize="14" TextWrapping="Wrap" />
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border Background="{StaticResource ClawXeSSBlueBadgeBrush}" CornerRadius="10" Padding="18">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Need a game-specific answer?" FontWeight="SemiBold" />
+                                <TextBlock Text="Check the official compatibility list for game-specific fixes." FontSize="14" Foreground="{ThemeResource ClawMutedBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Click="GuideCompatibility_Click" Content="Compatibility list" />
+                            <Button Grid.Column="2" Click="GuideFrameGeneration_Click" Content="FG documentation" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
 
         <Grid x:Name="FooterPanel" Grid.Row="3" Background="{ThemeResource ClawFooterBrush}" Padding="24,10" Opacity="0">
             <Grid.ColumnDefinitions>

@@ -114,7 +114,7 @@ public sealed class GameProfile : INotifyPropertyChanged
     [JsonIgnore]
     public string TechnologySummary => DetectedTechnologies.Length == 0
         ? "No supported upscaler DLL detected"
-        : string.Join("  •  ", DetectedTechnologies);
+        : string.Join(", ", DetectedTechnologies);
 
     [JsonIgnore]
     public string StatusSummary => IsInstalled
