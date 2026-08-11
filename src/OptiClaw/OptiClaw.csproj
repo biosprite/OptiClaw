@@ -20,6 +20,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishSingleFile>false</PublishSingleFile>
+    <!-- Portable single-file builds must override this to false or WinUI crashes before opening a window. -->
     <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>

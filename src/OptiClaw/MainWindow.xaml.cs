@@ -205,7 +205,11 @@ public sealed partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(_paths.Root);
-            Process.Start(new ProcessStartInfo(_paths.Root) { UseShellExecute = true });
+            if (!await Windows.System.Launcher.LaunchFolderPathAsync(_paths.Root))
+            {
+                throw new System.ComponentModel.Win32Exception("Windows could not open the folder.");
+            }
+
             StatusText.Text = "Opened the OptiClaw data folder";
         }
         catch (Exception exception) when (exception is IOException
