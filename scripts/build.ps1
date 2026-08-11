@@ -4,7 +4,7 @@ param(
 )
 
 $releaseName = "OptiClaw"
-$packageVersion = "1.1.0.0"
+$packageVersion = "1.2.0.0"
 if (-not [string]::IsNullOrWhiteSpace($Tag)) {
     $tagValue = $Tag.Trim()
     if ($tagValue -notmatch '^v?(?<version>\d+\.\d+(?:\.\d+){0,2})(?:-[0-9A-Za-z.-]+)?$') {
